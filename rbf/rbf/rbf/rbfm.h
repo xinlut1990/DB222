@@ -32,9 +32,6 @@ struct Slot_t{
 static const unsigned EMPTY_SLOT =  -1;
 static const unsigned TOMBSTONE_SLOT = -2;
 static const int HF_PAGE_MAX_SLOT_NUMBER = 50;
-static const unsigned RC_GREATER_THAN_REQUEST_RC = 13;
-static const unsigned RC_LESS_THAN_REQUEST_RC = 14;
-static const unsigned RC_EQUALS_TO_REQUEST_RC = 15;
 
 // Attribute
 typedef enum { TypeInt = 0, TypeReal, TypeVarChar } AttrType;

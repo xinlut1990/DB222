@@ -25,6 +25,9 @@ static const int RC_SLOT_NOT_EXISTED = 10;
 static const int RC_EMPTY_RECORD_DESCRIPTOR = 11;
 static const int RC_APPEND_PAGE_FAIL = 12;
 static const int RC_TABLE_NOT_EXISTED = 13;
+static const int RC_GREATER_THAN_REQUEST_RC = 13;
+static const int RC_LESS_THAN_REQUEST_RC = 14;
+static const int RC_EQUALS_TO_REQUEST_RC = 15;
 static const int RC_DELETE_RECORD_FAIL = 17;
 
 #endif
