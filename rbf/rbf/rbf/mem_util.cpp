@@ -50,14 +50,22 @@ void copyStrBetweenBuffer(void *dest, int &destOffset, const void *src, int &src
 //build a char* style string from buffer, change the offset in the parameter
 //need to free the string later on
 char * buildStrFromBuffer(const void *buffer, int &offset) {
-	char *str = NULL;
-	int *pStrLen = (int*)malloc(sizeof(int));
 
+	//string length
+	int *pStrLen = (int*)malloc(sizeof(int));
+	if (pStrLen == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return NULL;
+	}
 	memcpy(pStrLen, (char*)buffer + offset, sizeof(int));
 	offset += sizeof(int);
 
-	str = (char*)malloc(*pStrLen + 1);
-
+	//string
+	char *str = (char*)malloc(*pStrLen + 1);
+	if (str == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return NULL;
+	}
 	memcpy(str, (char*)buffer + offset, *pStrLen);
 	offset += *pStrLen;
 

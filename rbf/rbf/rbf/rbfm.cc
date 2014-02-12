@@ -14,20 +14,25 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data) {
 	  if(index == scanList.size()) {
 		  return RBFM_EOF;
 	  }
-	  rid.pageNum = scanList[index].pageNum;
-	  rid.slotNum = scanList[index].slotNum;
+
+	  rid = scanList[index];
 
 	  FileHandle fileHandle;
 	  if(!SUCCEEDED( rbfm->openFile(fileName, fileHandle) ))
 		return RC_FILE_OPEN_FAIL;
-	  void *recordData = malloc(length * 2);
+
+	  void *recordData = malloc(length * 2);//TODO: how to deal with this hacky length?
 	  rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
 	  rbfm->projectRecord(data, recordData, recordDescriptor, attributeNames);
+
 	  if(!SUCCEEDED( rbfm->closeFile(fileHandle) ))
 		return RC_FILE_CLOSE_FAIL;
+
 	  free(recordData);
+
 	  index++;
-		return 0; 
+
+	  return RC_SUCCESS; 
 };
 
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
@@ -390,6 +395,7 @@ RC RecordBasedFileManager::deleteRecord(FileHandle &fileHandle, const vector<Att
 
 	    newLocaton_rid.pageNum = page_num;
 	    newLocaton_rid.slotNum = slot_num;
+
 		if(!SUCCEEDED(deleteRecord(fileHandle, recordDescriptor, newLocaton_rid)))
 			return RC_DELETE_RECORD_FAIL;
 
@@ -492,6 +498,7 @@ RC RecordBasedFileManager::readRecordwithTombstone(FileHandle &fileHandle, const
 	RID rid;
 	unsigned page_num, slot_num, bitwise_buffer;
 	
+	//TODO: refactor these five lines
 	page_num = (slot_t.record_offset >> 16);
 	bitwise_buffer = (slot_t.record_offset << 16);
 	slot_num = ( bitwise_buffer >> 16 );
@@ -574,6 +581,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 
 	    newLocaton_rid.pageNum = page_num;
 	    newLocaton_rid.slotNum = slot_num;
+
 		deleteRecord(fileHandle, recordDescriptor, newLocaton_rid);
 		this->updateRecordwithTombstone(fileHandle, recordDescriptor, data, rid, ptr_HFPage);
 		ptr_HFPage->writeData(pageBuffer);
@@ -692,6 +700,10 @@ void HFPage::merge(void *data)
 	vector< pair<Slot_t, int> > slot_t;
 	vector< pair<Slot_t, int> >::iterator slot_t_iterator;
     void *pageBuffer = malloc(PAGE_SIZE);
+	if (pageBuffer == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return;
+	}
 	unsigned insert_record_offset;
 	slot_compare compare_Slot;
 

@@ -79,20 +79,19 @@ class RecordBasedFileManager;
 
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {index = 0;};
-  ~RBFM_ScanIterator() {
-  };
-  //vector iterator
-  vector<RID> scanList;//todo: memory leak?
-  char* fileName;
-  vector<Attribute> recordDescriptor;
-  vector<string> attributeNames;
-  int index;
-  int length;
-  RecordBasedFileManager* rbfm;
-  // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID &rid, void *data);
-  RC close() { return -1; };
+   RBFM_ScanIterator() {index = 0;};
+   ~RBFM_ScanIterator() {};
+   //vector iterator
+   vector<RID> scanList;//todo: memory leak?
+   char* fileName;
+   vector<Attribute> recordDescriptor;
+   vector<string> attributeNames;
+   int index;
+   int length;
+   RecordBasedFileManager* rbfm;
+   // "data" follows the same format as RecordBasedFileManager::insertRecord()
+   RC getNextRecord(RID &rid, void *data);
+   RC close() { return -1; };
 };
 
 

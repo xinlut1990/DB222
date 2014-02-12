@@ -182,6 +182,7 @@ RC RelationManager::insertColumnInfo(FileHandle &fileHandle, const string &table
 			return errCode;
 		}
 		free(data);
+
 		attrIt++;
 		colPos++; 
 	}
@@ -634,8 +635,8 @@ RC RelationManager::getFileHandle(const string &tableName, FileHandle &fileHandl
 	//get the line with tableName equals to the argument(assume there is only one line in the loop)
 	while( rbfm_ScanIterator.getNextRecord(rid, recordData) != RBFM_EOF ) {
 		//get the length of string from the buffer first
-		int offset = 0;
-		pFileName = buildStrFromBuffer(recordData, offset);
+		int zeroOffset = 0;
+		pFileName = buildStrFromBuffer(recordData, zeroOffset);
 		break;
 	}
 	free(recordData);

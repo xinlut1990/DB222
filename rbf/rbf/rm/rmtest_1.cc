@@ -36,7 +36,15 @@ void secA_1(const string &tableName, const int nameLength, const string &name, c
     RID rid; 
     int tupleSize = 0;
     void *tuple = malloc(100);
+	if(tuple == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return;
+	}
     void *returnedData = malloc(100);
+	if(returnedData == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return;
+	}
 
     // Insert a tuple into a table
     prepareTuple(nameLength, name, age, height, salary, tuple, &tupleSize);
@@ -79,7 +87,15 @@ void secA_2(const string &tableName, const int nameLength, const string &name, c
     RID rid; 
     int tupleSize = 0;
     void *tuple = malloc(100);
+	if(tuple == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return;
+	}
     void *returnedData = malloc(100);
+	if(returnedData == NULL) {
+		cout<<"error: mem allocation fail!"<<endl;
+		return;
+	}
 
     // Test Insert the Tuple    
     prepareTuple(nameLength, name, age, height, salary, tuple, &tupleSize);
