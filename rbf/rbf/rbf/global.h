@@ -2,7 +2,7 @@
 #define _global_h_
 
 //global variables
-//git awesome
+//git awesome!!!!!!!!!!!!
 #define SUCCEEDED(x) ((x) == 0)
 
 static const int TBL_SYSTEM = 1;
