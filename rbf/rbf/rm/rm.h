@@ -127,7 +127,7 @@ private:
   RC deleteColumnInfo(const string &tableName);
 
   static RelationManager *_rm;
-  RecordBasedFileManager *_rbfm;
+  static RecordBasedFileManager *_rbfm;
 
   //meta-descriptors
   vector<Attribute> tableAttrs;

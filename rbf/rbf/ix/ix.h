@@ -8,7 +8,9 @@
 #include "../rbf/rbfm.h"
 
 # define IX_EOF (-1)  // end of the index scan
-
+# define ORDER (100)
+# define INDEX (1)
+# define LEAF (2)
 class IX_ScanIterator;
 
 class IndexManager {
@@ -51,6 +53,7 @@ class IndexManager {
 
  private:
   static IndexManager *_index_manager;
+  static PagedFileManager *_pf_manager;
 };
 
 class IX_ScanIterator {
@@ -67,3 +70,47 @@ void IX_PrintError (RC rc);
 
 
 #endif
+
+//index header 
+struct IH_page 
+{
+	unsigned depth;
+	unsigned rootType;
+	int rootPageNum;
+	void init();
+	void readData(const void *data);
+	void writeData(void *data);
+};
+
+template <class T>
+struct index_item
+{
+	T k;
+	unsigned p;
+};
+
+template <class T>
+struct index_page 
+{
+	bool isRoot;
+	unsigned p0;
+	index_item<T> items[2 * ORDER];
+	void readData(const void *data);
+	void writeData(void *data);
+};
+
+template <class T>
+struct leaf_item
+{
+	T k;
+	RID rid;
+};
+
+template <class T>
+struct leaf_page 
+{
+	int nextPage;
+	leaf_item<T> items[2 * ORDER];
+	void readData(const void *data);
+	void writeData(void *data);
+};

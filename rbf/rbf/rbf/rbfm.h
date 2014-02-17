@@ -3,9 +3,13 @@
 #define _rbfm_h_
 
 #include <string>
-#include <string.h>
 #include <iterator>
 #include <vector>
+#include <malloc.h>
+#include <stdlib.h>
+#include <iomanip>
+#include <algorithm>
+#include <functional>
 
 #include "global.h"
 #include "pfm.h"
@@ -184,6 +188,7 @@ protected:
 
 private:
   static RecordBasedFileManager *_rbf_manager;
+  static PagedFileManager *_pf_manager;
   RID curRec;            // rid of last record returned
 };
 

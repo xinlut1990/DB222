@@ -1,14 +1,7 @@
 #define _CRT_SECURE_NO_DEPRECATE 
 #define _CRT_NONSTDC_NO_DEPRECATE
 
-#include <malloc.h>
-#include <stdlib.h>
-#include <iomanip>
-#include <vector>
-#include <algorithm>
-#include <functional>
 #include "rbfm.h"
-#include "pfm.h"
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data) { 
 	  if(index == scanList.size()) {
@@ -36,12 +29,14 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data) {
 };
 
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
+PagedFileManager* RecordBasedFileManager::_pf_manager = 0;
 
 RecordBasedFileManager* RecordBasedFileManager::instance()
 {
-    if(!_rbf_manager)
+    if(!_rbf_manager) {
+		_pf_manager = PagedFileManager::instance();
         _rbf_manager = new RecordBasedFileManager();
-
+	}
     return _rbf_manager;
 }
 
@@ -54,82 +49,19 @@ RecordBasedFileManager::~RecordBasedFileManager()
 }
 
 RC RecordBasedFileManager::createFile(const char *fileName) {
-
-	//see if the file already exists
-	FILE* pFile;
-	pFile = fopen(fileName, "rb");
-	//if not exists, create new file
-	if(pFile == NULL) 
-	{
-		pFile = fopen(fileName, "w+b");
-		if( pFile == NULL ) 
-		{
-			return RC_FILE_CREATION_FAIL;
-		} 
-		else 
-		{
-			return fclose(pFile); // 0 is returned if the file is successfully closed, otherwise, EOF is returned
-		}
-	} 
-	else 
-	{   
-		if( !SUCCEEDED( fclose(pFile) ) ) 
-			return RC_FILE_CLOSE_FAIL;
-
-		return RC_FILE_EXISTED;
-	}
+	return _pf_manager->createFile(fileName);
 }
 
 RC RecordBasedFileManager::destroyFile(const char *fileName) {
-
-	FILE* pFile = fopen( fileName, "rb" );
-
-	if( pFile == NULL ) {
-		return RC_FILE_NOT_EXISTED;
-	} else {
-		//close before destroy
-		if( !SUCCEEDED( fclose(pFile) ) ) 
-			return RC_FILE_CLOSE_FAIL;
-
-		if( SUCCEEDED( remove(fileName) )){ 
-			return RC_SUCCESS;
-		}
-		else{ 
-			perror ("The following error occurred");
-			return RC_FILE_DESTROY_FAIL;
-		}
-		
-	}
+	return _pf_manager->destroyFile(fileName);
 }
 
 RC RecordBasedFileManager::openFile(const char *fileName, FileHandle &fileHandle) {
-
-	FILE* pFile = fopen(fileName, "rb");
-
-	if( pFile == NULL ) {
-		return RC_FILE_NOT_EXISTED;
-	} else {
-
-		if( !SUCCEEDED( fclose(pFile) ) ) 
-			return RC_FILE_CLOSE_FAIL;
-
-		pFile = fopen(fileName, "r+b");
-		if( pFile == NULL ) {
-			return RC_FILE_OPEN_FAIL;
-		} else {
-			return fileHandle.bindFile( (char* )fileName, pFile);
-		}
-	}
+	return _pf_manager->openFile(fileName, fileHandle);
 }
 
 RC RecordBasedFileManager::closeFile(FileHandle &fileHandle) {
-	int errCode = fclose(fileHandle.getHandle());
-
-	if(errCode != 0 ) {
-		return RC_FILE_CLOSE_FAIL;
-	} else {
-		return RC_SUCCESS;
-	}
+	return _pf_manager->closeFile(fileHandle);
 }
 
 unsigned RecordBasedFileManager::getRecordLength(const vector<Attribute> &recordDescriptor, const void *data)
@@ -181,6 +113,7 @@ void RecordBasedFileManager::removeRecordfromBuffer(void *buffer, unsigned offse
 {
 	memset((char*)buffer + offset, 0, recordLength);
 }
+//TODO: 
 RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void* data, RID &rid) {
 
 	HFPage* ptr_HFPage = new HFPage();
@@ -888,7 +821,6 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,const vector<Attribute> &
                                 const CompOp compOp,const void *value,const vector<string> &attributeNames,RBFM_ScanIterator &rbfm_ScanIterator)
 {
 	void *returnedData = malloc(100);
-	char* buffer_char;
 	string buffer_str;
 
 	HFPage* ptr_HFPage = (HFPage*)malloc(sizeof(HFPage));

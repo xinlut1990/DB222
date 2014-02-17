@@ -2,11 +2,14 @@
 #include "rm.h"
 
 RelationManager* RelationManager::_rm = 0;
+RecordBasedFileManager* RelationManager::_rbfm = 0;
 
 RelationManager* RelationManager::instance()
 {
-    if(!_rm)
+    if(!_rm) {
+		_rbfm = RecordBasedFileManager::instance();
         _rm = new RelationManager();
+	}
 
     return _rm;
 }
@@ -68,7 +71,6 @@ void RelationManager::initColumnAttrs()
 
 RelationManager::RelationManager()
 {
-	_rbfm = RecordBasedFileManager::instance();
 
 	FileHandle tableFileHandle;
 	FileHandle columnFileHandle;
