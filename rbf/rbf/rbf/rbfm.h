@@ -22,11 +22,12 @@ typedef int RC;
 typedef unsigned PageNum;
 struct HFPage;
 // Record ID
-typedef struct
+struct RID
 {
   unsigned pageNum;
   unsigned slotNum;
-} RID;
+  bool operator==(const RID &rid) const { return this->pageNum == rid.pageNum && this->slotNum == rid.slotNum;};
+};
 
 struct Slot_t{
 	unsigned record_offset;

@@ -11,8 +11,12 @@
 # define ORDER (100)
 # define INDEX (1)
 # define LEAF (2)
-class IX_ScanIterator;
+# define MAX_PAGE_NUM (400)
 
+# define FREED (1)
+# define IN_USE (2)
+class IX_ScanIterator;
+struct IH_page;
 class IndexManager {
  public:
   static IndexManager* instance();
@@ -52,6 +56,20 @@ class IndexManager {
   ~IndexManager  ();                            // Destructor
 
  private:
+
+  int IndexManager::searchLeafWith(
+	  FileHandle &fileHandle,
+	  int rootPageNum, 
+	  int depth, 
+	  AttrType type, 
+	  const void *key) const;
+
+  RC insertToLeaf( void *pageBuffer, 
+							  IH_page *ptr_IHPage, 
+							  AttrType type, 
+							  const void *key, 
+							  const RID &rid);
+
   static IndexManager *_index_manager;
   static PagedFileManager *_pf_manager;
 };
@@ -71,13 +89,21 @@ void IX_PrintError (RC rc);
 
 #endif
 
+struct page_entry
+{
+	unsigned pageNum;
+	unsigned status;
+};
+
 //index header 
 struct IH_page 
 {
 	unsigned depth;
-	unsigned rootType;
+	unsigned keyType;
 	int rootPageNum;
-	void init();
+	unsigned pageNum;
+	page_entry pages[MAX_PAGE_NUM];
+	void init(AttrType type);
 	void readData(const void *data);
 	void writeData(void *data);
 };
@@ -93,10 +119,12 @@ template <class T>
 struct index_page 
 {
 	bool isRoot;
+	unsigned itemNum;
 	unsigned p0;
 	index_item<T> items[2 * ORDER];
 	void readData(const void *data);
 	void writeData(void *data);
+	int searchChild(const T &key);
 };
 
 template <class T>
@@ -110,7 +138,14 @@ template <class T>
 struct leaf_page 
 {
 	int nextPage;
+	unsigned itemNum;
 	leaf_item<T> items[2 * ORDER];
+
 	void readData(const void *data);
 	void writeData(void *data);
+	bool isFull();
+	bool isHalf();
+	void insertItem(const T &key, const RID &rid);
+	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
+	leaf_page();
 };

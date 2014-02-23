@@ -29,5 +29,10 @@ static const int RC_GREATER_THAN_REQUEST_RC = 14;
 static const int RC_LESS_THAN_REQUEST_RC = 15;
 static const int RC_EQUALS_TO_REQUEST_RC = 16;
 static const int RC_DELETE_RECORD_FAIL = 17;
+static const int RC_UNDER_CONSTRUCTION = 18;
+static const int RC_TYPE_MISMATCH = 19;
+static const int RC_EMPTY_INDEX = 20;
+static const int RC_EMPTY_PAGE = 21;
+static const int RC_INDEX_DELETE_FAIL = 22;
 
 #endif

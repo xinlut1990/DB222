@@ -96,5 +96,20 @@ inline float readFloatFromBuffer(const void *buffer, int &offset)
 	return num;
 }
 
+inline void readArrayFromBuffer(void *arr, unsigned itemSize, unsigned length, const void *buffer, int &offset)
+{
+	memcpy(arr, (char*)buffer + offset, itemSize * length);
+}
+
+inline void writeArrayToBuffer(void *buffer, int &offset, const void *arr, unsigned itemSize, unsigned length)
+{
+	memcpy((char*)buffer + offset, arr, itemSize * length);
+}
+
+inline void initArray(void *arr, unsigned itemSize, unsigned length)
+{
+	memset(arr, 0, itemSize * length);
+}
+
 
 #endif
