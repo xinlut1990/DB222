@@ -63,8 +63,19 @@ class IndexManager {
 	  int depth, 
 	  AttrType type, 
 	  const void *key) const;
-
-  RC insertToLeaf( void *pageBuffer, 
+  RC recursivelyInsertIndex(FileHandle &filehandle, 
+							void *pageBuffer,
+							IH_page *ptr_IHPage, 
+							  AttrType type, 
+							  const void *key, 
+							  const int pageNum);
+  RC recursivelyInsert(FileHandle &filehandle, 
+							void *pageBuffer,
+							IH_page *ptr_IHPage, 
+							  AttrType type, 
+							  const void *key, 
+							  const RID &rid);
+  RC insertToLeaf(void *pageBuffer, 
 							  IH_page *ptr_IHPage, 
 							  AttrType type, 
 							  const void *key, 
@@ -119,12 +130,20 @@ template <class T>
 struct index_page 
 {
 	bool isRoot;
+	int parentPage;
 	unsigned itemNum;
 	unsigned p0;
 	index_item<T> items[2 * ORDER];
 	void readData(const void *data);
 	void writeData(void *data);
+	bool isFull() const;
+	bool isHalf() const;
+	void insertItem(const T &key, const int pageNum);
+	bool deleteItem(int index);
+	void split(index_page &newIndexPage);
+	void updateParentForChildren( FileHandle *fileHandle);
 	int searchChild(const T &key);
+	index_page();
 };
 
 template <class T>
@@ -137,15 +156,18 @@ struct leaf_item
 template <class T>
 struct leaf_page 
 {
+	int parentPage;
 	int nextPage;
 	unsigned itemNum;
 	leaf_item<T> items[2 * ORDER];
 
 	void readData(const void *data);
 	void writeData(void *data);
-	bool isFull();
-	bool isHalf();
+	bool isFull() const;
+	bool isHalf() const;
 	void insertItem(const T &key, const RID &rid);
 	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
+	void split(leaf_page &newLeafPage);
+	void link(int newLeafPageNum);
 	leaf_page();
 };

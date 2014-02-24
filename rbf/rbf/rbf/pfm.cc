@@ -156,6 +156,7 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 
 RC FileHandle::appendPage(const void *data)
 {
+	fseek(pFile, this->pageNum * PAGE_SIZE, SEEK_SET);
     int errCode = fwrite(data, sizeof(char), PAGE_SIZE, this->pFile);
 	this->pageNum++;
 	if (errCode == PAGE_SIZE)
