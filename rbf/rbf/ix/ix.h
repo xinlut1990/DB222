@@ -86,12 +86,24 @@ class IndexManager {
 };
 
 class IX_ScanIterator {
+
  public:
-  IX_ScanIterator();  							// Constructor
+  IX_ScanIterator() {index = 0;};  							// Constructor
   ~IX_ScanIterator(); 							// Destructor
 
-  RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
+  RC getNextEntry(RID &rid, void *key) { 	  
+	  if(index == scanList.size()) {
+		  return RBFM_EOF;
+	  }
+	  rid = scanList[index++];
+	  return RC_SUCCESS;
+  };  		// Get next matching entry
   RC close();             						// Terminate index scan
+
+  vector<RID> scanList;
+private:
+  int index;
+
 };
 
 // print out the error message for a given return code
@@ -116,7 +128,8 @@ struct IH_page
 	page_entry pages[MAX_PAGE_NUM];
 	void init(AttrType type);
 	void readData(const void *data);
-	void writeData(void *data);
+	void writeData(void *data) const;
+	void updateAfterNewPage(int pageIdx);
 };
 
 template <class T>
@@ -135,7 +148,7 @@ struct index_page
 	unsigned p0;
 	index_item<T> items[2 * ORDER];
 	void readData(const void *data);
-	void writeData(void *data);
+	void writeData(void *data) const;
 	bool isFull() const;
 	bool isHalf() const;
 	void insertItem(const T &key, const int pageNum);
@@ -151,6 +164,7 @@ struct leaf_item
 {
 	T k;
 	RID rid;
+	bool inRange(const void *lowKey,const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
 };
 
 template <class T>
@@ -162,12 +176,13 @@ struct leaf_page
 	leaf_item<T> items[2 * ORDER];
 
 	void readData(const void *data);
-	void writeData(void *data);
+	void writeData(void *data) const;
 	bool isFull() const;
 	bool isHalf() const;
 	void insertItem(const T &key, const RID &rid);
 	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
 	void split(leaf_page &newLeafPage);
 	void link(int newLeafPageNum);
+
 	leaf_page();
 };

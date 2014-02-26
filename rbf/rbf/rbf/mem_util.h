@@ -96,6 +96,74 @@ inline float readFloatFromBuffer(const void *buffer, int &offset)
 	return num;
 }
 
+template <class T>
+class reader
+{
+public:
+	 static inline T readFromBuffer(const void *buffer, int &offset);
+};
+
+template <>
+class reader<string>
+{
+	public:
+	static inline string readFromBuffer(const void *buffer, int &offset) {
+
+		//string length
+		int *pStrLen = (int*)malloc(sizeof(int));
+		if (pStrLen == NULL) {
+			cout<<"error: mem allocation fail!"<<endl;
+			return NULL;
+		}
+		memcpy(pStrLen, (char*)buffer + offset, sizeof(int));
+		offset += sizeof(int);
+
+		//string
+		char *str = (char*)malloc(*pStrLen + 1);
+		if (str == NULL) {
+			cout<<"error: mem allocation fail!"<<endl;
+			return NULL;
+		}
+		memcpy(str, (char*)buffer + offset, *pStrLen);
+		offset += *pStrLen;
+
+		str[*pStrLen] = '\0';
+
+		free(pStrLen);
+
+		string s(str);
+		free(str);
+		return s;
+	};
+};
+
+template <>
+class reader<int>
+{
+public:
+	static inline int readFromBuffer(const void *buffer, int &offset)
+	{
+		int num = 0;
+		memcpy(&num, (char*)buffer + offset, sizeof(int));
+		offset += sizeof(int);
+		return num;
+	};
+};
+
+template <>
+class reader<float>
+{
+public:
+	static inline float readFromBuffer(const void *buffer, int &offset)
+	{
+		float num = 0.0;
+		memcpy(&num, (char*)buffer + offset, sizeof(float));
+		offset += sizeof(float);
+		return num;
+	};
+};
+
+
 inline void readArrayFromBuffer(void *arr, unsigned itemSize, unsigned length, const void *buffer, int &offset)
 {
 	memcpy(arr, (char*)buffer + offset, itemSize * length);

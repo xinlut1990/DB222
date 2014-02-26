@@ -69,7 +69,10 @@ int IndexManager::searchLeafWith(FileHandle &fileHandle,
 			indexPage.readData(pageBuffer);
 
 			int offset = 0;
-			int k = readIntFromBuffer(key, offset);
+			int k = 0;
+			if(key != NULL) {
+			  k	= readIntFromBuffer(key, offset);
+			}
 			pageNum = indexPage.searchChild(k);
 
 		} else if(type == TypeReal  ) {
@@ -77,8 +80,8 @@ int IndexManager::searchLeafWith(FileHandle &fileHandle,
 			indexPage.readData(pageBuffer);
 
 			int offset = 0;
-			int k = readFloatFromBuffer(key, offset);
-			pageNum = indexPage.searchChild(k);
+			//float k = readFloatFromBuffer(key, offset);
+			//pageNum = indexPage.searchChild(k);
 		} else {
 
 		}
@@ -120,6 +123,8 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 
 			//TODO: nee testing, buggy
 			int newIndexPageNum = filehandle.getNumberOfPages() - 1;
+			//update header
+			ptr_IHPage->updateAfterNewPage(newIndexPageNum);
 
 			//insert the new entry
 			if(k > indexPage.items[indexPage.itemNum - 1].k) {
@@ -127,10 +132,7 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 			} else {
 				indexPage.insertItem(k, pageNum);
 			}
-			//update header
-			ptr_IHPage->pageNum++;
-			ptr_IHPage->pages[ptr_IHPage->pageNum - 1].pageNum = newIndexPageNum;
-			ptr_IHPage->pages[ptr_IHPage->pageNum - 1].status = IN_USE;
+
 
 			//TODO: update the parent pointer of children
 			//newIndexPage.updateParentForChildren(filehandle);
@@ -152,9 +154,10 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 				ptr_IHPage->depth++;
 				//dangerous design
 				int parentPageNum = filehandle.getNumberOfPages() - 1;
+				ptr_IHPage->updateAfterNewPage(parentPageNum);
+
 				//reset links
 				ptr_IHPage->rootPageNum = parentPageNum;
-				ptr_IHPage->pageNum++;
 				indexPage.parentPage = parentPageNum;
 				newIndexPage.parentPage = parentPageNum;
 			} else {
@@ -231,6 +234,9 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 
 		//need to change
 		int newLeafPageNum = filehandle.getNumberOfPages() - 1;
+		//update header
+		ptr_IHPage->updateAfterNewPage(newLeafPageNum);
+
 		//link two pages
 		leafPage.link(newLeafPageNum);
 
@@ -240,10 +246,6 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 		} else {
 			leafPage.insertItem(k, rid);
 		}
-		//update header
-		ptr_IHPage->pageNum++;
-		ptr_IHPage->pages[ptr_IHPage->pageNum - 1].pageNum = newLeafPageNum;
-		ptr_IHPage->pages[ptr_IHPage->pageNum - 1].status = IN_USE;
 
 		//page buffer for parent
 		void *parentBuffer = (void*)malloc(PAGE_SIZE);
@@ -263,11 +265,13 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 			indexPage.isRoot = true;
 			indexPage.p0 = ptr_IHPage->rootPageNum;
 			ptr_IHPage->depth++;
+
 			//dangerous design
 			int parentPageNum = filehandle.getNumberOfPages() - 1;
+			ptr_IHPage->updateAfterNewPage(parentPageNum);
+
 			//reset links
 			ptr_IHPage->rootPageNum = parentPageNum;
-			ptr_IHPage->pageNum++;
 			leafPage.parentPage = parentPageNum;
 			newLeafPage.parentPage = parentPageNum;
 		} else {
@@ -388,10 +392,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		insertToLeaf(pageBuffer, ptr_IHPage, attribute.type, key, rid);
 
 		//after inserting first page
-		ptr_IHPage->pageNum = 1;
+		ptr_IHPage->updateAfterNewPage(1);
 		ptr_IHPage->rootPageNum = 1;
-		ptr_IHPage->pages[0].pageNum = 1;
-		ptr_IHPage->pages[0].status = IN_USE;
 
 		ptr_IHPage->writeData(headerBuffer);
 		//write header into the end of the file
@@ -569,6 +571,7 @@ RC IndexManager::scan(FileHandle &fileHandle,
     bool        	highKeyInclusive,
     IX_ScanIterator &ix_ScanIterator)
 {
+	
 	if(fileHandle.getHandle() == NULL) {
 		return RC_FILE_NOT_EXISTED;
 	}
@@ -595,28 +598,51 @@ RC IndexManager::scan(FileHandle &fileHandle,
 	//search for leaf page with key
 	int leafPageNum = searchLeafWith(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, attribute.type, lowKey);
 	
+	void *pageBuffer = (void*)malloc(PAGE_SIZE);
+	if (pageBuffer == NULL)
+		return RC_MEM_ALLOCATION_FAIL;
+
+
+	if(attribute.type == TypeInt ) {
+		leaf_page<int> leafPage;
+
+		while(leafPageNum != -1) {
+			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
+				return RC_FILE_READ_FAIL;
+			
+			leafPage.readData(pageBuffer);
+
+			for(int i = 0; i < leafPage.itemNum; i ++) {
+				if(leafPage.items[i].inRange(lowKey, highKey, lowKeyInclusive, highKeyInclusive)) {
+					ix_ScanIterator.scanList.push_back(leafPage.items[i].rid);
+				}
+			}
+			leafPageNum = leafPage.nextPage;
+
+		}
+
+	} else if(attribute.type == TypeReal ) {
+		leaf_page<float> leafPage;
+		leafPage.readData(pageBuffer);
+	} else {
+
+	}
 	
+
+	free(pageBuffer);
 	free(headerBuffer);
 	free(ptr_IHPage);
 	return RC_SUCCESS;
 }
 
-IX_ScanIterator::IX_ScanIterator()
-{
-}
 
 IX_ScanIterator::~IX_ScanIterator()
 {
 }
 
-RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
-{
-	return -1;
-}
-
 RC IX_ScanIterator::close()
 {
-	return -1;
+	return RC_SUCCESS;
 }
 
 void IX_PrintError (RC rc)
@@ -637,9 +663,16 @@ void IH_page::readData(const void *data)
 	memcpy(this,data,sizeof(IH_page));
 }
 
-void IH_page::writeData(void *data)
+void IH_page::writeData(void *data) const
 {
 	memcpy(data,this,sizeof(IH_page));
+}
+
+void IH_page::updateAfterNewPage(int pageIdx)
+{
+	this->pageNum++;
+	this->pages[this->pageNum - 1].pageNum = pageIdx;
+	this->pages[this->pageNum - 1].status = IN_USE;
 }
 
 template <class T>
@@ -649,7 +682,7 @@ void index_page<T>::readData(const void *data)
 }
 
 template <class T>
-void index_page<T>::writeData(void *data)
+void index_page<T>::writeData(void *data) const
 {
 	memcpy(data,this,sizeof(index_page<T>));
 }
@@ -770,7 +803,7 @@ void leaf_page<T>::readData(const void *data)
 }
 
 template <class T>
-void leaf_page<T>::writeData(void *data)
+void leaf_page<T>::writeData(void *data) const
 {
 	memcpy(data,this,sizeof(leaf_page<T>));
 }
@@ -870,4 +903,54 @@ leaf_page<T>::leaf_page()
 	this->itemNum = 0;
 	initArray(this->items, sizeof(leaf_item<T>), 2 * ORDER);
 	
+}
+
+template <class T>
+bool leaf_item<T>::inRange(const void *lowKey,const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+{
+	int offset = 0;
+	if(lowKey != NULL) {
+		 T lk = reader<T>::readFromBuffer(lowKey, offset);
+		 if(highKey != NULL)  {//both bounds
+			 offset = 0;
+			 T hk = reader<T>::readFromBuffer(highKey, offset);
+
+			 if(lowKeyInclusive) {
+				if(highKeyInclusive) {
+					return this->k >= lk && this->k <= hk;
+				} else {
+					return this->k >= lk && this->k < hk;
+				}
+			 } else {
+				if(highKeyInclusive) {
+					return this->k > lk && this->k <= hk;
+				} else {
+					return this->k > lk && this->k < hk;
+				}
+			 }
+		 } else { // only low bounds
+			 if(lowKeyInclusive) {
+				 return this->k >= lk;
+			 } else {
+				 return this->k > lk;
+			 }
+		 }
+	} else {
+		 if(highKey != NULL)  { // only high bounds
+			 offset = 0;
+			 T hk = reader<T>::readFromBuffer(highKey, offset);
+
+			 if(highKeyInclusive) {
+			 	 return this->k <= hk;
+			 } else {
+				 return this->k < hk;
+			 }
+
+		 } else { // no bounds
+			 return true;
+		 }
+	}
+
+	
+
 }
