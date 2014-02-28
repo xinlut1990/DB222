@@ -1001,7 +1001,7 @@ int index_page<T>::searchChild(const T &key)
 
 	for(int i = 1; i < itemNum; i++) {
 		if(key < items[i].k) {
-			return items[i].p;
+			return items[i - 1].p;
 		}
 	}
 	return items[itemNum - 1].p;
