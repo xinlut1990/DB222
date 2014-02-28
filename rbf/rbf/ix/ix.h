@@ -60,13 +60,16 @@ class IndexManager {
   ~IndexManager  ();                            // Destructor
 
  private:
+  template <class T>
+  RC insertEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid);  // Insert new index entry
 
-  int IndexManager::searchLeafWith(
+  template <class T>
+  int searchLeafWith(
 	  FileHandle &fileHandle,
 	  int rootPageNum, 
 	  int depth, 
-	  AttrType type, 
-	  const void *key) const;
+	  const T &key) const;
+
   template <class T>
   RC recursivelyInsertIndex(FileHandle &filehandle, 
 							void *pageBuffer,

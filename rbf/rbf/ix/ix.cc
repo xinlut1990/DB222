@@ -221,52 +221,40 @@ RC IndexManager::print(FileHandle &fileHandle, AttrType type)
 
 
 //return page id of the leaf page
+template <class T>
 int IndexManager::searchLeafWith(FileHandle &fileHandle, 
 								 int rootPageNum, 
 								 int depth, 
-								 AttrType type, 
-								 const void *key) const
+								 const T &key) const
 {
+	void *pageBuffer = (void*)malloc(PAGE_SIZE);
+	if (pageBuffer == NULL)
+		return RC_MEM_ALLOCATION_FAIL;
 
 	int curDepth = 1;
 	int pageNum = rootPageNum;
 
 	//loop until we get the page number of the leaf page
 	while(curDepth < depth) {
-		void *pageBuffer = (void*)malloc(PAGE_SIZE);
-		if (pageBuffer == NULL)
-			return RC_MEM_ALLOCATION_FAIL;
+
 
 		//read root page
 		if(!SUCCEEDED(fileHandle.readPage(pageNum, pageBuffer)))
 			return RC_FILE_READ_FAIL;
 
 		//search in current level
-		if(type == TypeInt  ) {
-			index_page<int> indexPage;
-			indexPage.readData(pageBuffer);
+		index_page<T> indexPage;
+		indexPage.readData(pageBuffer);
 
-			int offset = 0;
-			int k = 0;
-			if(key != NULL) {
-			  k	= readIntFromBuffer(key, offset);
-			}
-			pageNum = indexPage.searchChild(k);
+		int offset = 0;
+		T key = 0;
+		pageNum = indexPage.searchChild(key);
 
-		} else if(type == TypeReal  ) {
-			index_page<float> indexPage;
-			indexPage.readData(pageBuffer);
-
-			int offset = 0;
-			//float k = readFloatFromBuffer(key, offset);
-			//pageNum = indexPage.searchChild(k);
-		} else {
-
-		}
+		
 		curDepth++;
-		free(pageBuffer);
-	}
 
+	}
+	free(pageBuffer);
 	return pageNum;
 
 }
@@ -480,12 +468,10 @@ RC IndexManager::insertToLeaf( void *pageBuffer,
 	//normal read
 	leaf_page<T> leafPage;
 	leafPage.readData(pageBuffer);
-	int offset = 0;
 
 	//insert item
 	if(leafPage.isFull()) {
 		return RC_LEAF_PAGE_FULL;
-			
 	} else {
 		leafPage.insertItem(key, rid);
 		//after inserting new entry
@@ -494,8 +480,25 @@ RC IndexManager::insertToLeaf( void *pageBuffer,
 
 	return RC_SUCCESS;
 }
-
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
+{
+	int offset = 0;
+	if(attribute.type == TypeInt) {
+		int k = reader<int>::readFromBuffer(key, offset);
+		insertEntryByType<int>(fileHandle, TypeInt, k, rid);
+	} else if(attribute.type == TypeReal) {
+		float k = reader<float>::readFromBuffer(key, offset);
+		insertEntryByType<float>(fileHandle, TypeReal, k, rid);
+	} else {
+		string k = reader<string>::readFromBuffer(key, offset);
+		insertEntryByType<string>(fileHandle, TypeVarChar, k, rid);
+	}
+
+	return RC_SUCCESS;
+}
+
+template <class T>
+RC IndexManager::insertEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid)
 {
 	IH_page* ptr_IHPage = new IH_page();
 	if (ptr_IHPage == NULL)
@@ -512,14 +515,12 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 		//assume that insertion when tree is empty is stable
 		// initialize the header infomration
 
-		if(attribute.type == TypeInt) {
+		if(type == TypeInt) {
 			ptr_IHPage->init(TypeInt);
-		} else if(attribute.type == TypeReal) {
+		} else if(type == TypeReal) {
 			ptr_IHPage->init(TypeReal);
 		} else {
-			//TODO:
-			cout<<"string not supported yet"<<endl;
-			return RC_UNDER_CONSTRUCTION;
+			ptr_IHPage->init(TypeVarChar);
 		}
 
 		void *pageBuffer = (void*)malloc(PAGE_SIZE);
@@ -527,17 +528,9 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return RC_MEM_ALLOCATION_FAIL;
 		memset(pageBuffer, 0, PAGE_SIZE);
 
-			int offset = 0;
-			if(attribute.type == TypeInt) {
-				int k = reader<int>::readFromBuffer(key, offset);
-				insertToLeaf<int>(pageBuffer, ptr_IHPage, k, rid);
-			} else if(attribute.type == TypeReal) {
-				float k = reader<float>::readFromBuffer(key, offset);
-				insertToLeaf<float>(pageBuffer, ptr_IHPage, k, rid);
-			} else {
-				string k = reader<string>::readFromBuffer(key, offset);
-				insertToLeaf<string>(pageBuffer, ptr_IHPage, k, rid);
-			}
+				
+		insertToLeaf<T>(pageBuffer, ptr_IHPage, key, rid);
+			
 
 		//after inserting first page
 		ptr_IHPage->updateAfterNewPage(1);
@@ -562,7 +555,7 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 		ptr_IHPage->readData(headerBuffer);
 
-		if(ptr_IHPage->keyType != attribute.type) {
+		if(ptr_IHPage->keyType != type) {
 			return RC_TYPE_MISMATCH;
 		}
 
@@ -577,24 +570,10 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
 				return RC_FILE_READ_FAIL;
 
-			int offset = 0;
-			if(attribute.type == TypeInt) {
-				int k = reader<int>::readFromBuffer(key, offset);
-				if(insertToLeaf<int>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<int>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
-			} else if(attribute.type == TypeReal) {
-				float k = reader<float>::readFromBuffer(key, offset);
-				if(insertToLeaf<float>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<float>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
-			} else {
-				string k = reader<string>::readFromBuffer(key, offset);
-				if(insertToLeaf<string>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<string>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
+			
+			if(insertToLeaf<T>(pageBuffer, ptr_IHPage, key, rid) == RC_LEAF_PAGE_FULL) {
+				recursivelyInsert<T>(fileHandle, pageBuffer, ptr_IHPage, key, rid);
 			}
-
 
 			//write page buffer back to file
 			if(!SUCCEEDED(fileHandle.writePage(leafPageNum, pageBuffer)))
@@ -609,28 +588,14 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 				return RC_MEM_ALLOCATION_FAIL;
 
 			//search for leaf page with key
-			int leafPageNum = searchLeafWith(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, attribute.type, key);
+			int leafPageNum = searchLeafWith<T>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, key);
 						
 			//read leaf page
 			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
 				return RC_FILE_READ_FAIL;
 
-			int offset = 0;
-			if(attribute.type == TypeInt) {
-				int k = reader<int>::readFromBuffer(key, offset);
-				if(insertToLeaf<int>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<int>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
-			} else if(attribute.type == TypeReal) {
-				float k = reader<float>::readFromBuffer(key, offset);
-				if(insertToLeaf<float>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<float>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
-			} else {
-				string k = reader<string>::readFromBuffer(key, offset);
-				if(insertToLeaf<string>(pageBuffer, ptr_IHPage, k, rid) == RC_LEAF_PAGE_FULL) {
-					recursivelyInsert<string>(fileHandle, pageBuffer, ptr_IHPage, k, rid);
-				}
+			if(insertToLeaf<T>(pageBuffer, ptr_IHPage, key, rid) == RC_LEAF_PAGE_FULL) {
+				recursivelyInsert<T>(fileHandle, pageBuffer, ptr_IHPage, key, rid);
 			}
 
 			//write page buffer back to file
@@ -646,10 +611,8 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 			return RC_FILE_WRITE_FAIL;
 		
 	}
-
+	delete ptr_IHPage;
 	free(headerBuffer);
-	free(ptr_IHPage);
-
 
 	return RC_SUCCESS;
 }
@@ -736,7 +699,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 	}
 
 	free(headerBuffer);
-	free(ptr_IHPage);
+	delete ptr_IHPage;
 
 	return RC_SUCCESS;
 }
@@ -772,9 +735,6 @@ RC IndexManager::scan(FileHandle &fileHandle,
 	if(ptr_IHPage->keyType != attribute.type) {
 		return RC_TYPE_MISMATCH;
 	}
-
-	//search for leaf page with key
-	int leafPageNum = searchLeafWith(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, attribute.type, lowKey);
 	
 	void *pageBuffer = (void*)malloc(PAGE_SIZE);
 	if (pageBuffer == NULL)
@@ -783,6 +743,10 @@ RC IndexManager::scan(FileHandle &fileHandle,
 
 	if(attribute.type == TypeInt ) {
 		leaf_page<int> leafPage;
+		int offset = 0;
+		int lk = reader<int>::readFromBuffer( lowKey, offset);
+		//search for leaf page with key
+		int leafPageNum = searchLeafWith<int>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, lk);
 
 		while(leafPageNum != -1) {
 			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
