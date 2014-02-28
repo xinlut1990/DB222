@@ -193,11 +193,6 @@ private:
   RID curRec;            // rid of last record returned
 };
 
-#endif
-
-
-
-
 struct HFPage
 {
 	Slot_t slot[HF_PAGE_MAX_SLOT_NUMBER];
@@ -219,6 +214,13 @@ struct HFPage
 	void readData(const void *data);
 	void writeData(void *data);
 };
+
 struct slot_compare {
   bool operator() (const pair<Slot_t, int> &a, const pair<Slot_t, int> &b) { return a.first.record_offset < b.first.record_offset;}
 }; // would be used to sort the vector < pair<Slot_t, int> > accorrding to the record offset
+
+#endif
+
+
+
+

@@ -1768,7 +1768,7 @@ void test()
 	attrEmpName.name = "EmpName";
 	attrEmpName.type = TypeVarChar;
 
-    testCase_4B(indexAgeFileName, attrAge);
+    //testCase_4B(indexAgeFileName, attrAge);
     testCase_5(indexAgeFileName, attrAge);
     testCase_6(indexHeightFileName, attrHeight);
     testCase_7(indexHeightFileName, attrHeight);

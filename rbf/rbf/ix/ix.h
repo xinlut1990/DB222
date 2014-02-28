@@ -6,15 +6,14 @@
 #include <string>
 
 #include "../rbf/rbfm.h"
+#include "ix_data_struct.h"
 
 # define IX_EOF (-1)  // end of the index scan
-# define ORDER (10)
-# define INDEX (1)
-# define LEAF (2)
 # define MAX_PAGE_NUM (400)
 
 # define FREED (1)
 # define IN_USE (2)
+
 class IX_ScanIterator;
 struct IH_page;
 class IndexManager {
@@ -68,23 +67,23 @@ class IndexManager {
 	  int depth, 
 	  AttrType type, 
 	  const void *key) const;
+  template <class T>
   RC recursivelyInsertIndex(FileHandle &filehandle, 
 							void *pageBuffer,
 							IH_page *ptr_IHPage, 
-							  AttrType type, 
-							  const void *key, 
+							  const T &key, 
 							  const int pageNum,
 							  bool leafBelow);
+  template <class T>
   RC recursivelyInsert(FileHandle &filehandle, 
 							void *pageBuffer,
 							IH_page *ptr_IHPage, 
-							  AttrType type, 
-							  const void *key, 
+							  const T &key, 
 							  const RID &rid);
+  template <class T>
   RC insertToLeaf(void *pageBuffer, 
 							  IH_page *ptr_IHPage, 
-							  AttrType type, 
-							  const void *key, 
+							  const T &key, 
 							  const RID &rid);
 
   static IndexManager *_index_manager;
@@ -116,7 +115,6 @@ private:
 void IX_PrintError (RC rc);
 
 
-#endif
 
 struct page_entry
 {
@@ -137,58 +135,4 @@ struct IH_page
 	void writeData(void *data) const;
 	void updateAfterNewPage(int pageIdx);
 };
-
-template <class T>
-struct index_item
-{
-	T k;
-	unsigned p;
-};
-
-template <class T>
-struct index_page 
-{
-	bool isRoot;
-	int parentPage;
-	unsigned itemNum;
-	unsigned p0;
-	index_item<T> items[2 * ORDER];
-	void readData(const void *data);
-	void writeData(void *data) const;
-	bool isFull() const;
-	bool isHalf() const;
-	void insertItem(const T &key, const int pageNum);
-	bool deleteItem(int index);
-	void split(index_page &newIndexPage);
-	RC updateParentForChildren(FileHandle &fileHandle, int myPageNum, bool leafBelow);
-	int searchChild(const T &key);
-	index_page();
-};
-
-template <class T>
-struct leaf_item
-{
-	T k;
-	RID rid;
-	bool inRange(const void *lowKey,const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
-};
-
-template <class T>
-struct leaf_page 
-{
-	int parentPage;
-	int nextPage;
-	unsigned itemNum;
-	leaf_item<T> items[2 * ORDER];
-
-	void readData(const void *data);
-	void writeData(void *data) const;
-	bool isFull() const;
-	bool isHalf() const;
-	void insertItem(const T &key, const RID &rid);
-	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
-	void split(leaf_page &newLeafPage);
-	void link(int newLeafPageNum);
-
-	leaf_page();
-};
+#endif

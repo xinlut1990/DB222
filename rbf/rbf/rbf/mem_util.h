@@ -101,6 +101,7 @@ class reader
 {
 public:
 	 static inline T readFromBuffer(const void *buffer, int &offset);
+	 static inline T writeToBuffer(void *buffer, int &offset, const T &value);
 };
 
 template <>
@@ -135,6 +136,14 @@ class reader<string>
 		free(str);
 		return s;
 	};
+
+	static inline void writeStrToBuffer(void *buffer, int &offset, const string &value) {
+		int strLen = value.length();
+		memcpy((char *)buffer + offset, &strLen, sizeof(int));
+		offset += sizeof(int);    
+		memcpy((char *)buffer + offset, value.c_str(), strLen);
+		offset += strLen;
+	}
 };
 
 template <>
@@ -148,6 +157,11 @@ public:
 		offset += sizeof(int);
 		return num;
 	};
+
+	static inline void writeToBuffer(void *buffer, int &offset, const int &value) {
+		memcpy((char *)buffer + offset, &value, sizeof(int));
+		offset += sizeof(int);    
+	}
 };
 
 template <>
@@ -161,6 +175,11 @@ public:
 		offset += sizeof(float);
 		return num;
 	};
+
+	static inline void writeToBuffer(void *buffer, int &offset, const float &value) {
+		memcpy((char *)buffer + offset, &value, sizeof(float));
+		offset += sizeof(float);    
+	}
 };
 
 
