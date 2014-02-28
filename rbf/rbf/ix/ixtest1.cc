@@ -124,6 +124,8 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
         }
     }
 
+
+
     // delete entry
     rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
     if(rc != success)
@@ -305,7 +307,16 @@ int testCase_4A(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Closing Scan..." << endl;
         goto error_close_index;
     }
-
+	/*
+	 *
+	 *print out B+ tree
+	 */
+    rc = indexManager->print(fileHandle, attribute.type);
+    if(rc != success)
+    {
+		cout << "Failed Accessing Entry..." << endl;
+        goto error_close_index;
+    }
     // Close Index
     rc = indexManager->closeFile(fileHandle);
     if(rc == success)

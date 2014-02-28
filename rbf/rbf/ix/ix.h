@@ -51,6 +51,11 @@ class IndexManager {
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
 
+  // prints out B+ tree 
+  //
+  RC print(FileHandle &fileHandle, AttrType type);
+
+
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor

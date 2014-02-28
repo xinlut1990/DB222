@@ -35,4 +35,6 @@ static const int RC_EMPTY_INDEX = 20;
 static const int RC_EMPTY_PAGE = 21;
 static const int RC_INDEX_DELETE_FAIL = 22;
 static const int RC_LEAF_PAGE_FULL = 23;
+static const int RC_ROOT_PAGE_READ_FAIL = 24;
+static const int RC_INVALID_NUM_OF_ENTRIES = 25;
 #endif
