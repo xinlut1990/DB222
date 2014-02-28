@@ -8,7 +8,7 @@
 #include "../rbf/rbfm.h"
 
 # define IX_EOF (-1)  // end of the index scan
-# define ORDER (100)
+# define ORDER (10)
 # define INDEX (1)
 # define LEAF (2)
 # define MAX_PAGE_NUM (400)
@@ -73,7 +73,8 @@ class IndexManager {
 							IH_page *ptr_IHPage, 
 							  AttrType type, 
 							  const void *key, 
-							  const int pageNum);
+							  const int pageNum,
+							  bool leafBelow);
   RC recursivelyInsert(FileHandle &filehandle, 
 							void *pageBuffer,
 							IH_page *ptr_IHPage, 
@@ -159,7 +160,7 @@ struct index_page
 	void insertItem(const T &key, const int pageNum);
 	bool deleteItem(int index);
 	void split(index_page &newIndexPage);
-	void updateParentForChildren( FileHandle *fileHandle);
+	RC updateParentForChildren(FileHandle &fileHandle, int myPageNum, bool leafBelow);
 	int searchChild(const T &key);
 	index_page();
 };

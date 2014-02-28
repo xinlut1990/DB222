@@ -104,7 +104,7 @@ RC IndexManager::print(FileHandle &fileHandle, AttrType type)
 			index_page<int> *prt_indexPage = new index_page<int>();
 		
 			// fetch the info of root page
-		    if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->pageNum, headerBuffer)))
+		    if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
 				return RC_FILE_READ_FAIL;
 
 		    prt_indexPage->readData(headerBuffer);
@@ -288,7 +288,8 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 							IH_page *ptr_IHPage, 
 							  AttrType type, 
 							  const void *key, 
-							  const int pageNum)
+							  const int pageNum,
+							  bool leafBelow)
 {
 		//normal read
 	if(type == TypeInt  ) {
@@ -323,9 +324,8 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 				indexPage.insertItem(k, pageNum);
 			}
 
-
 			//TODO: update the parent pointer of children
-			//newIndexPage.updateParentForChildren(filehandle);
+			newIndexPage.updateParentForChildren(filehandle, newIndexPageNum, leafBelow);
 
 			//page buffer for parent
 			void *parentBuffer = (void*)malloc(PAGE_SIZE);
@@ -374,7 +374,7 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 			free(newPageBuffer);
 
 			//push up
-			recursivelyInsertIndex(filehandle, parentBuffer, ptr_IHPage, type, newKey, newIndexPageNum);
+			recursivelyInsertIndex(filehandle, parentBuffer, ptr_IHPage, type, newKey, newIndexPageNum, false);
 			free(newKey);
 
 			if(!SUCCEEDED(filehandle.writePage(indexPage.parentPage, parentBuffer)))
@@ -483,7 +483,7 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 		offset = 0;
 		void *newKey = malloc(sizeof(int));
 		writeIntToBuffer(newKey, offset, newLeafPage.items[0].k);
-		recursivelyInsertIndex(filehandle, parentBuffer, ptr_IHPage, type, newKey, newLeafPageNum);
+		recursivelyInsertIndex(filehandle, parentBuffer, ptr_IHPage, type, newKey, newLeafPageNum, true);
 		free(newKey);
 
 		if(!SUCCEEDED(filehandle.writePage(leafPage.parentPage, parentBuffer)))
@@ -954,6 +954,42 @@ void index_page<T>::split(index_page<T> &newIndexPage)
 	}
 	//cut the size of the old page
 	this->itemNum = halfSize;
+}
+
+//update the parent link for children after the split of an index page
+template <class T>
+RC index_page<T>::updateParentForChildren(FileHandle &fileHandle, int myPageNum, bool leafBelow)
+{
+	void *pageBuffer = (void*)malloc(PAGE_SIZE);
+	if (pageBuffer == NULL)
+		return RC_MEM_ALLOCATION_FAIL;
+	//init
+	memset(pageBuffer, 0, PAGE_SIZE);
+
+
+	for(int i = 0; i < itemNum; i++) {
+
+		int pageNum = items[i].p;
+
+		if(!SUCCEEDED(fileHandle.readPage(pageNum, pageBuffer)))
+			return RC_FILE_READ_FAIL;
+		if(leafBelow) {
+			leaf_page<T> leafPage;
+			leafPage.readData(pageBuffer);
+			leafPage.parentPage = myPageNum;
+			leafPage.writeData(pageBuffer);
+		} else {
+			leaf_page<T> indexPage;
+			indexPage.readData(pageBuffer);
+			indexPage.parentPage = myPageNum;
+			indexPage.writeData(pageBuffer);
+		}
+
+		if(!SUCCEEDED(fileHandle.writePage(pageNum, pageBuffer)))
+			return RC_FILE_WRITE_FAIL;
+	}
+	free(pageBuffer);
+
 }
 
 template <class T>
