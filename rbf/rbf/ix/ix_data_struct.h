@@ -6,17 +6,19 @@
 
 using namespace std;
 
-# define ORDER (10)
+# define ORDER (20)
 # define INDEX (1)
 # define LEAF (2)
 
+//enum for bound type
+typedef enum { NONE = 0, INCLUSIVE, EXCLUSIVE } BoundType;
 
 template <class T>
 struct leaf_item
 {
 	T k;
 	RID rid;
-	bool inRange(const void *lowKey,const void *highKey, bool lowKeyInclusive, bool highKeyInclusive);
+	bool inRange(const T &lowKey,const T &highKey, BoundType lowBoundType, BoundType highBoundType);
 };
 
 template <class T>

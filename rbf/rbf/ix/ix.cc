@@ -4,6 +4,7 @@
 #include "ix_data_struct.cpp"
 using namespace std;
 
+
 IndexManager* IndexManager::_index_manager = 0;
 PagedFileManager* IndexManager::_pf_manager = 0;
 
@@ -221,6 +222,8 @@ RC IndexManager::print(FileHandle &fileHandle, AttrType type)
 
 
 //return page id of the leaf page
+//TODO: potential bug!
+//key might be default value, which means null
 template <class T>
 int IndexManager::searchLeafWith(FileHandle &fileHandle, 
 								 int rootPageNum, 
@@ -246,11 +249,8 @@ int IndexManager::searchLeafWith(FileHandle &fileHandle,
 		index_page<T> indexPage;
 		indexPage.readData(pageBuffer);
 
-		int offset = 0;
-		T key = 0;
 		pageNum = indexPage.searchChild(key);
-
-		
+		//increase depth
 		curDepth++;
 
 	}
@@ -279,6 +279,7 @@ RC IndexManager::recursivelyInsertIndex(FileHandle &filehandle,
 		if (newPageBuffer == NULL)
 			return RC_MEM_ALLOCATION_FAIL;
 		memset(newPageBuffer, 0, PAGE_SIZE);
+
 		if(!SUCCEEDED(filehandle.appendPage(newPageBuffer)))
 			return RC_APPEND_PAGE_FAIL;
 
@@ -485,16 +486,15 @@ RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute,
 	int offset = 0;
 	if(attribute.type == TypeInt) {
 		int k = reader<int>::readFromBuffer(key, offset);
-		insertEntryByType<int>(fileHandle, TypeInt, k, rid);
+		return insertEntryByType<int>(fileHandle, TypeInt, k, rid);
 	} else if(attribute.type == TypeReal) {
 		float k = reader<float>::readFromBuffer(key, offset);
-		insertEntryByType<float>(fileHandle, TypeReal, k, rid);
+		return insertEntryByType<float>(fileHandle, TypeReal, k, rid);
 	} else {
 		string k = reader<string>::readFromBuffer(key, offset);
-		insertEntryByType<string>(fileHandle, TypeVarChar, k, rid);
+		return insertEntryByType<string>(fileHandle, TypeVarChar, k, rid);
 	}
 
-	return RC_SUCCESS;
 }
 
 template <class T>
@@ -528,10 +528,8 @@ RC IndexManager::insertEntryByType(FileHandle &fileHandle, AttrType type, const 
 			return RC_MEM_ALLOCATION_FAIL;
 		memset(pageBuffer, 0, PAGE_SIZE);
 
-				
 		insertToLeaf<T>(pageBuffer, ptr_IHPage, key, rid);
 			
-
 		//after inserting first page
 		ptr_IHPage->updateAfterNewPage(1);
 		ptr_IHPage->rootPageNum = 1;
@@ -557,6 +555,9 @@ RC IndexManager::insertEntryByType(FileHandle &fileHandle, AttrType type, const 
 
 		if(ptr_IHPage->keyType != type) {
 			return RC_TYPE_MISMATCH;
+		}
+		if(ptr_IHPage->pageNum == MAX_PAGE_NUM) {
+			return RC_PAGE_OVERFLOW;
 		}
 
 		//naive case
@@ -611,13 +612,31 @@ RC IndexManager::insertEntryByType(FileHandle &fileHandle, AttrType type, const 
 			return RC_FILE_WRITE_FAIL;
 		
 	}
-	delete ptr_IHPage;
+
 	free(headerBuffer);
+	free(ptr_IHPage);
 
 	return RC_SUCCESS;
 }
 
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
+{
+	int offset = 0;
+	//normal read
+	if(attribute.type == TypeInt ) {
+		int k = reader<int>::readFromBuffer(key, offset);
+		return deleteEntryByType<int>(fileHandle, attribute.type, k, rid);
+	} else if(attribute.type == TypeReal ) {
+		float k = reader<float>::readFromBuffer(key, offset);
+		return deleteEntryByType<float>(fileHandle, attribute.type, k, rid);
+	} else {
+		string k = reader<string>::readFromBuffer(key, offset);
+		return deleteEntryByType<string>(fileHandle, attribute.type, k, rid);
+	}
+}
+
+template <class T>
+RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid)
 {
 	IH_page* ptr_IHPage = new IH_page();
 	if (ptr_IHPage == NULL)
@@ -636,7 +655,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 		ptr_IHPage->readData(headerBuffer);
 
-		if(ptr_IHPage->keyType != attribute.type) {
+		if(ptr_IHPage->keyType != type) {
 			return RC_TYPE_MISMATCH;
 		}
 
@@ -653,32 +672,25 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 				return RC_FILE_READ_FAIL;
 
 			//normal read
-			if(attribute.type == TypeInt ) {
-				leaf_page<int> leafPage;
-				leafPage.readData(pageBuffer);
-				if(leafPage.itemNum == 0) {
-					return RC_EMPTY_PAGE;
-				}
-				int offset = 0;
-				int k = readIntFromBuffer(key, offset);
-				//delete item
-				if(leafPage.isHalf()) {
-					//borrow node
-
-					//merge node
-				} else {
-					if(!leafPage.deleteItem(k, rid)) {
-						return RC_INDEX_DELETE_FAIL;
-					} else {
-						leafPage.writeData(pageBuffer);
-					}
-				}
-
-			} else if(attribute.type == TypeReal) {
-
-			}else {
-				//TODO: read function for string
+			leaf_page<T> leafPage;
+			leafPage.readData(pageBuffer);
+			if(leafPage.itemNum == 0) {
+				return RC_EMPTY_PAGE;
 			}
+
+			//delete item
+			if(leafPage.isHalf()) {
+				//borrow node
+
+				//merge node
+			} else {
+				if(!leafPage.deleteItem(key, rid)) {
+					return RC_INDEX_DELETE_FAIL;
+				} else {
+					leafPage.writeData(pageBuffer);
+				}
+			}
+
 
 			ptr_IHPage->writeData(headerBuffer);
 			//write header back to file
@@ -691,7 +703,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 
 			free(pageBuffer);
 
-		} else {
+		} else { //regular case
 
 		}
 	} else {  //no entry to delete
@@ -710,6 +722,85 @@ RC IndexManager::scan(FileHandle &fileHandle,
     const void      *highKey,
     bool			lowKeyInclusive,
     bool        	highKeyInclusive,
+    IX_ScanIterator &ix_ScanIterator)
+{
+	BoundType lowBoundType = lowKeyInclusive ? INCLUSIVE : EXCLUSIVE;
+	BoundType highBoundType = highKeyInclusive ? INCLUSIVE : EXCLUSIVE;
+
+	if(attribute.type == TypeInt ) {
+		leaf_page<int> leafPage;
+
+		int offset = 0;
+		int lk = 0;
+		if(lowKey != NULL) {
+			lk = reader<int>::readFromBuffer( lowKey, offset);
+		} else {
+			lowBoundType = NONE;
+		}
+
+		offset = 0;
+		int hk = 0;
+		if(highKey != NULL) {
+			hk = reader<int>::readFromBuffer( highKey, offset);
+		} else {
+			highBoundType = NONE;
+		}
+
+		return scanByType<int>(fileHandle, attribute.type, lk, hk, lowBoundType, highBoundType, ix_ScanIterator);
+
+	} else if(attribute.type == TypeReal ) {
+		leaf_page<float> leafPage;
+
+		int offset = 0;
+		float lk = 0;
+		if(lowKey != NULL) {
+			lk = reader<float>::readFromBuffer( lowKey, offset);
+		} else {
+			lowBoundType = NONE;
+		}
+
+		offset = 0;
+		float hk = 0;
+		if(highKey != NULL) {
+			hk = reader<float>::readFromBuffer( highKey, offset);
+		} else {
+			highBoundType = NONE;
+		}
+
+		return scanByType<float>(fileHandle, attribute.type, lk, hk, lowBoundType, highBoundType, ix_ScanIterator);
+
+	} else {
+		leaf_page<string> leafPage;
+		
+		int offset = 0;
+		string lk = "";
+		if(lowKey != NULL) {
+			lk = reader<string>::readFromBuffer( lowKey, offset);
+		} else {
+			lowBoundType = NONE;
+		}
+
+		offset = 0;
+		string hk = "";
+		if(highKey != NULL) {
+			hk = reader<string>::readFromBuffer( highKey, offset);
+		} else {
+			highBoundType = NONE;
+		}
+
+		return scanByType<string>(fileHandle, attribute.type, lk, hk, lowBoundType, highBoundType, ix_ScanIterator);
+
+	}
+
+}
+
+template <class T>
+RC IndexManager::scanByType(FileHandle &fileHandle,
+	AttrType        type,
+    const T         &lowKey,
+    const T         &highKey,
+    BoundType        lowBoundType,
+    BoundType        highBoundType,
     IX_ScanIterator &ix_ScanIterator)
 {
 	
@@ -732,7 +823,7 @@ RC IndexManager::scan(FileHandle &fileHandle,
 
 	ptr_IHPage->readData(headerBuffer);
 
-	if(ptr_IHPage->keyType != attribute.type) {
+	if(ptr_IHPage->keyType != type) {
 		return RC_TYPE_MISMATCH;
 	}
 	
@@ -741,32 +832,23 @@ RC IndexManager::scan(FileHandle &fileHandle,
 		return RC_MEM_ALLOCATION_FAIL;
 
 
-	if(attribute.type == TypeInt ) {
-		leaf_page<int> leafPage;
-		int offset = 0;
-		int lk = reader<int>::readFromBuffer( lowKey, offset);
-		//search for leaf page with key
-		int leafPageNum = searchLeafWith<int>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, lk);
+	leaf_page<T> leafPage;
 
-		while(leafPageNum != -1) {
-			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
-				return RC_FILE_READ_FAIL;
+	//search for leaf page with key
+	int leafPageNum = searchLeafWith<T>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, lowKey);
+
+	while(leafPageNum != -1) {
+		if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
+			return RC_FILE_READ_FAIL;
 			
-			leafPage.readData(pageBuffer);
-
-			for(int i = 0; i < leafPage.itemNum; i ++) {
-				if(leafPage.items[i].inRange(lowKey, highKey, lowKeyInclusive, highKeyInclusive)) {
-					ix_ScanIterator.scanList.push_back(leafPage.items[i].rid);
-				}
-			}
-			leafPageNum = leafPage.nextPage;
-
-		}
-
-	} else if(attribute.type == TypeReal ) {
-		leaf_page<float> leafPage;
 		leafPage.readData(pageBuffer);
-	} else {
+
+		for(int i = 0; i < leafPage.itemNum; i ++) {
+			if(leafPage.items[i].inRange(lowKey, highKey, lowBoundType, highBoundType)) {
+				ix_ScanIterator.scanList.push_back(leafPage.items[i].rid);
+			}
+		}
+		leafPageNum = leafPage.nextPage;
 
 	}
 	

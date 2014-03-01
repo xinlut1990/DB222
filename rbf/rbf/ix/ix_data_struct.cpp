@@ -271,53 +271,40 @@ leaf_page<T>::leaf_page()
 }
 
 template <class T>
-bool leaf_item<T>::inRange(const void *lowKey,const void *highKey, bool lowKeyInclusive, bool highKeyInclusive)
+bool leaf_item<T>::inRange(const T &lowKey,const T &highKey, BoundType lowBoundType, BoundType highBoundType)
 {
-	int offset = 0;
-	if(lowKey != NULL) {
-		 T lk = reader<T>::readFromBuffer(lowKey, offset);
-		 if(highKey != NULL)  {//both bounds
-			 offset = 0;
-			 T hk = reader<T>::readFromBuffer(highKey, offset);
 
-			 if(lowKeyInclusive) {
-				if(highKeyInclusive) {
-					return this->k >= lk && this->k <= hk;
-				} else {
-					return this->k >= lk && this->k < hk;
-				}
-			 } else {
-				if(highKeyInclusive) {
-					return this->k > lk && this->k <= hk;
-				} else {
-					return this->k > lk && this->k < hk;
-				}
-			 }
-		 } else { // only low bounds
-			 if(lowKeyInclusive) {
-				 return this->k >= lk;
-			 } else {
-				 return this->k > lk;
-			 }
-		 }
-	} else {
-		 if(highKey != NULL)  { // only high bounds
-			 offset = 0;
-			 T hk = reader<T>::readFromBuffer(highKey, offset);
-
-			 if(highKeyInclusive) {
-			 	 return this->k <= hk;
-			 } else {
-				 return this->k < hk;
-			 }
-
-		 } else { // no bounds
-			 return true;
-		 }
+	if( highBoundType == NONE && lowBoundType == NONE) {
+		return true;
 	}
 
-	
+	if(highBoundType == NONE && lowBoundType == INCLUSIVE) {
+		return this->k >= lowKey;
+	}
+	if (highBoundType == NONE && lowBoundType == EXCLUSIVE ){
+		return this->k > lowKey;
+	}
+	if(lowBoundType == NONE && highBoundType == INCLUSIVE) {
+		return this->k <= highKey;
+	}
+	if(lowBoundType == NONE && highBoundType == EXCLUSIVE){
+		return this->k < highKey;
+	}
 
+	if(lowBoundType == INCLUSIVE && highBoundType == INCLUSIVE) {
+		return this->k >= lowKey && this->k <= highKey;
+	}
+	if(lowBoundType == INCLUSIVE && highBoundType == EXCLUSIVE){
+		return this->k >= lowKey && this->k < highKey;
+	}
+	if( lowBoundType == EXCLUSIVE && highBoundType == INCLUSIVE) {
+		return this->k > lowKey && this->k <= highKey;
+	}
+	if( lowBoundType == EXCLUSIVE && highBoundType == EXCLUSIVE){
+		return this->k > lowKey && this->k < highKey;
+	}
+
+	return false;
 }
 
 

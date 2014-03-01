@@ -14,6 +14,7 @@
 # define FREED (1)
 # define IN_USE (2)
 
+
 class IX_ScanIterator;
 struct IH_page;
 class IndexManager {
@@ -62,6 +63,18 @@ class IndexManager {
  private:
   template <class T>
   RC insertEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid);  // Insert new index entry
+  
+  template <class T>
+  RC deleteEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid);  // Delete index entry
+  
+  template <class T>
+  RC scanByType(FileHandle &fileHandle,
+	  AttrType type,
+	  const T        &lowKey,
+      const T        &highKey,
+      BoundType        lowBoundType,
+      BoundType        highBoundType,
+      IX_ScanIterator &ix_ScanIterator);
 
   template <class T>
   int searchLeafWith(
