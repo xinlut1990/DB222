@@ -51,10 +51,7 @@ class IndexManager {
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
 
-  // prints out B+ tree 
-  //
-  RC print(FileHandle &fileHandle, AttrType type);
-
+  RC printIndex(FileHandle &fileHandle, const Attribute &attribute);
 
  protected:
   IndexManager   ();                            // Constructor
@@ -101,6 +98,7 @@ class IndexManager {
 							  IH_page *ptr_IHPage, 
 							  const T &key, 
 							  const RID &rid);
+ 
 
   static IndexManager *_index_manager;
   static PagedFileManager *_pf_manager;

@@ -46,8 +46,7 @@ RC IndexManager::closeFile(FileHandle &fileHandle)
 	return _pf_manager->closeFile(fileHandle);
 }
 
-
-RC IndexManager::print(FileHandle &fileHandle, AttrType type)
+RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 {
 
 	IH_page* ptr_IHPage = new IH_page();
@@ -65,19 +64,19 @@ RC IndexManager::print(FileHandle &fileHandle, AttrType type)
 	if(fileHandle.getNumberOfPages() == 0 )   // There is no entry in the index
 	{
 		cout << " These is no entry in the index!\n" ;
+		return RC_EMPTY_INDEX;
 	}
 	else //regular case
 	{
-		
+		/***************************************************
+		 * Read header page to fetch corresponding page info
+		 **************************************************/
 		if(!SUCCEEDED(fileHandle.readPage(0, headerBuffer)))
 			return RC_FILE_READ_FAIL;
 
 		ptr_IHPage->readData(headerBuffer);
 
-		if(ptr_IHPage->keyType != type) {
-			return RC_TYPE_MISMATCH;
-		}
-
+		// Report header format
 		cout << "-------------------------------------------------------\n";
 		cout << "    Summary\n";
 		cout << "\n";
@@ -88,137 +87,161 @@ RC IndexManager::print(FileHandle &fileHandle, AttrType type)
 		cout << "-------------------------------------------------------\n"; 
 		memset(headerBuffer, 0, PAGE_SIZE);
 
-	    
-		if(type == TypeInt  ){
-			index_page<int> *prt_indexPage = new index_page<int>();
+		/**************************************
+		 *	bool isRoot;
+	        int parentPage;
+	        unsigned itemNum;
+	        unsigned p0;
+	        index_item<T> items[2 * ORDER];
+	        void readData(const void *data);
+	        void writeData(void *data) const;
+	        bool isFull() const;
+	        bool isHalf() const;
+	        void insertItem(const T &key, const int pageNum);
+	        bool deleteItem(int index);
+	        void split(index_page &newIndexPage);
+	        RC updateParentForChildren(FileHandle &fileHandle, int myPageNum, bool leafBelow);
+	        int searchChild(const T &key);
+	        index_page();
+		 **************************************/
+	    /*if (attribute.type == TypeInt)
+			index_page<int> indexPage;
+		else if (attribute.type == TypeReal)
+			index_page<float> indexPage;
+		else
+			index_page<string> indexPage;*/
+		index_page<int> indexPage;
 		
-			// fetch the info of root page
-		    if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
-				return RC_FILE_READ_FAIL;
+		// fetch the info of root page
+		if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
+			return RC_FILE_READ_FAIL;
 
-		    prt_indexPage->readData(headerBuffer);
-		    if (!prt_indexPage->isRoot)
-				return RC_ROOT_PAGE_READ_FAIL;
+		indexPage.readData(headerBuffer);
+		if (!indexPage.isRoot)
+			return RC_ROOT_PAGE_READ_FAIL;
 
-		    if (prt_indexPage->itemNum < 1 || prt_indexPage->itemNum > 2 * ORDER)
-				return RC_INVALID_NUM_OF_ENTRIES;
+		// Check to see if the req of root is satisfied
+		if (indexPage.itemNum < 1 || indexPage.itemNum > 2 * ORDER)
+			return RC_INVALID_NUM_OF_ENTRIES;
 
-		    cout << "    Root node  " << "Depth : " << curDepth << "\n\n ";
-			int count = 0;
-			for(int i = 0; i < prt_indexPage->itemNum; i ++ )
-			{
-				cout << "   " << prt_indexPage->items[i].k << " ";
-				child_node_index.push_back(prt_indexPage->items[i].p);
-				count++;
-				if ( count >= 10 )
-				{  cout << "\n "; count = 0; }
-			}
-		
-			cout << "\n";
-		    curDepth++;
-			cout << "-------------------------------------------------------\n"; 
-			delete prt_indexPage;
+		cout << "    Root node  " << "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<"\n\n ";
+		int count = 0;
+		for(int i = 0; i < indexPage.itemNum; i ++ )
+		{
+			cout << "   " << indexPage.items[i].k << " ";
+			child_node_index.push_back(indexPage.items[i].p);
+			count++;
+			if ( count >= 10 )
+			{  cout << "\n "; count = 0; }
 		}
+		
+		cout << "\n";
+		curDepth++;
+		cout << "-------------------------------------------------------\n"; 
+	
+	    /**********************************
+	     * non-root page fetch info
+	    *********************************/
 	    //loop until we get the page number of the leaf page
-	    while(curDepth <= ptr_IHPage->depth) {
+	    while(curDepth <= ptr_IHPage->depth) 
+		{
 			void *pageBuffer = (void*)malloc(PAGE_SIZE);
 			if (pageBuffer == NULL)
 				return RC_MEM_ALLOCATION_FAIL;
-			
 
 			if ( curDepth != ptr_IHPage->depth ) // index node
 			{
 
-					if(type == TypeInt  )
-					{
-						
-						int size = child_node_index.size();
-						for( int i = 0; i < size; i++ )
-						{
-                            index_page<int> *prt_indexPage = new index_page<int>();
-		 
-							memset(pageBuffer, 0, PAGE_SIZE);
-			                // fetch the info of root page
-							cout << child_node_index.front() <<endl;
-		                    if(!SUCCEEDED(fileHandle.readPage(child_node_index.front(), pageBuffer)))
-								return RC_FILE_READ_FAIL;
+				int size = child_node_index.size(); // child_node_index holds the info about all child nodes
+				for( int i = 0; i < size; i++ )
+				{
+					/*if (attribute.type == TypeInt)
+						index_page<int> indexPage;
+					else if (attribute.type == TypeReal)
+						index_page<float> indexPage;
+					else
+						index_page<string> indexPage;*/
+					index_page<int> indexPage;
 
-		                    prt_indexPage->readData(pageBuffer);
+					memset(pageBuffer, 0, PAGE_SIZE);
+			                
+					// fetch the info
+					cout << child_node_index.front() <<endl;
+		            if(!SUCCEEDED(fileHandle.readPage(child_node_index.front(), pageBuffer)))
+						return RC_FILE_READ_FAIL;
+					
+					indexPage.readData(pageBuffer);
 
-		                    if (prt_indexPage->itemNum < ORDER || prt_indexPage->itemNum > 2 * ORDER)
-								return RC_INVALID_NUM_OF_ENTRIES;
-
+		            if (indexPage.itemNum < ORDER || indexPage.itemNum > 2 * ORDER)
+						return RC_INVALID_NUM_OF_ENTRIES;
 		                    
-						    cout << "    Index (non-root )node  " << "Depth : " << curDepth << "\n\n ";
-			                int count = 0;
-			                for(int i = 0; i < prt_indexPage->itemNum; i ++ )
-			                {
-							     cout << "   " << prt_indexPage->items[i].k << " ";
-								 child_node_index.push_back(prt_indexPage->items[i].p);
-							     count++;
-							     if ( count >= 10 )
-							     {  cout << "\n "; count = 0; }
-						    }
-		                    child_node_index.erase(child_node_index.begin());
-						    cout << "\n";
-						    cout << "-------------------------------------------------------\n"; 
-
-						    delete prt_indexPage;
-						}
+			        cout << "    Index (non-root )page  " << "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<"\n\n ";
+			        int count = 0;
+			        for(int i = 0; i < indexPage.itemNum; i ++ )
+			        {
+						cout << "   " << indexPage.items[i].k << " ";
+						child_node_index.push_back(indexPage.items[i].p);
+						count++;
+						if ( count >= 10 )
+						{  cout << "\n "; count = 0; }
 					}
-					curDepth++;
+		            child_node_index.erase(child_node_index.begin());
+					cout << "\n";
+					cout << "-------------------------------------------------------\n"; 
+
+				}
+				curDepth++;
 			}
-			else{ // leaf node
-					if(type == TypeInt  )
-					{
-						int size = child_node_index.size();
+		    else{ // leaf node
+				int size = child_node_index.size();
 
-						for( int i = 0; i < size; i++ )
-						{
-                            leaf_page<int> *prt_leafPage = new leaf_page<int>();
+				for( int i = 0; i < size; i++ )
+				{
+					/*if (attribute.type == TypeInt)
+						leaf_page<int> leafPage;
+					else if (attribute.type == TypeReal)
+						leaf_page<float> leafPage;
+					else
+						leaf_page<string> leafPage;*/
+					leaf_page<int> leafPage;
 		
-							memset(pageBuffer, 0, PAGE_SIZE);
-			                // fetch the info of root page
-		                    if(!SUCCEEDED(fileHandle.readPage(child_node_index.front(), pageBuffer)))
-								return RC_FILE_READ_FAIL;
+					memset(pageBuffer, 0, PAGE_SIZE);
+			                
+					// fetch the info of root page
+		        	if(!SUCCEEDED(fileHandle.readPage(child_node_index.front(), pageBuffer)))
+						return RC_FILE_READ_FAIL;
 
-		                    prt_leafPage->readData(pageBuffer);
+		        	leafPage.readData(pageBuffer);
 
-		                    if (prt_leafPage->itemNum < ORDER || prt_leafPage->itemNum > 2 * ORDER)
-								return RC_INVALID_NUM_OF_ENTRIES;
+		        	if (leafPage.itemNum < ORDER || leafPage.itemNum > 2 * ORDER)
+						return RC_INVALID_NUM_OF_ENTRIES;
 
-		                    
-						    cout << "    Leaf node  " << "Depth : " << curDepth << "\n\n ";
-			                int count = 0;
-			                for(int i = 0; i < prt_leafPage->itemNum; i ++ )
-			                {
-							     cout << "   " << prt_leafPage->items[i].k << " ";
-							     count++;
-							     if ( count >= 10 )
-							     {  cout << "\n "; count = 0; }
-						    }
-		                    child_node_index.erase(child_node_index.begin());
-						    cout << "\n";
-						    cout << "-------------------------------------------------------\n"; 
-
-						    delete prt_leafPage;
-						}
+		        	cout << "    Leaf node  " << "Depth : " << curDepth << "itemNum: "<<leafPage.itemNum<<"\n\n ";
+			    	int count = 0;
+			    	for(int i = 0; i < leafPage.itemNum; i ++ )
+			    	{
+						cout << "   " << leafPage.items[i].k << " ";
+						count++;
+						if ( count >= 10 )
+						{  cout << "\n "; count = 0; }
 					}
-					curDepth++;
+		        	
+					child_node_index.erase(child_node_index.begin());
+					cout << "\n";
+					cout << "-------------------------------------------------------\n"; 
 
+				}
+				curDepth++;
 			}
 			free (pageBuffer);
-			free (headerBuffer);
-
-		
-
 	}
-		}
-	delete ptr_IHPage;
-    
+	
+	free (headerBuffer);
 
 	return RC_SUCCESS;
 }
+}
+	
 
 
 //return page id of the leaf page
@@ -948,5 +971,3 @@ void IH_page::updateAfterNewPage(int pageIdx)
 	this->pages[this->pageNum - 1].pageNum = pageIdx;
 	this->pages[this->pageNum - 1].status = IN_USE;
 }
-
-

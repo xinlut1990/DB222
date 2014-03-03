@@ -209,6 +209,13 @@ int testCase_5(const string &indexFileName, const Attribute &attribute)
         }
         inRidPageNumSum += rid.pageNum;
     }
+	rc = indexManager->printIndex (fileHandle, attribute);
+	if (rc != success)
+	{
+		cout << "Failed printing out index tree... "<<endl;
+		goto error_close_index;
+	}
+
 
     // Test Open Scan
     rc= indexManager->scan(fileHandle, attribute, &value, NULL, true, true, ix_ScanIterator);
