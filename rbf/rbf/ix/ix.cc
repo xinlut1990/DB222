@@ -703,10 +703,60 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 
 			free(pageBuffer);
 
-		} else { //regular case
+		} else { //regular case 
+			// A lazy deletion is adequate in terms of testing cases. In this approach, when an entry is deleted, even if it 
+			// causes a leaf page to become less than half full, no redistribution or node merging takes place. Underfilled node
+			// is allowed in this case according to project specifications.
+			void *pageBuffer = (void*)malloc(PAGE_SIZE);
+			if (pageBuffer == NULL)
+				return RC_MEM_ALLOCATION_FAIL;
 
+			//search for leaf page with key
+			int leafPageNum = searchLeafWith<T>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, key);
+						
+			//read leaf page
+			if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
+				return RC_FILE_READ_FAIL;
+
+			/******************************************************
+			 * Starts of deletion
+			 ******************************************************/
+
+			// ptr_leafPage
+			leaf_page<T> *ptr_leafPage = new leaf_page<T>();
+			ptr_leafPage->readData(pageBuffer);
+
+			// Empty node
+			if(ptr_leafPage->itemNum == 0) 
+			{
+				return RC_EMPTY_PAGE;
+			}
+
+			// Given that a lazy deletion would be implemented in this case, thus
+			// it is not necessary to check to see if following req is satisfied or not
+		    //if (ptr_leafPage->->itemNum < ORDER || ptr_leafPage->->itemNum > 2 * ORDER)
+			//	return RC_INVALID_NUM_OF_ENTRIES;
+			
+			if(!ptr_leafPage->deleteItem(key, rid)) 
+				return RC_INDEX_DELETE_FAIL;
+			else 
+				ptr_leafPage->writeData(pageBuffer);
+
+			//write page buffer back to file
+			if(!SUCCEEDED(fileHandle.writePage(leafPageNum, pageBuffer)))
+				return RC_FILE_WRITE_FAIL;
+
+			delete ptr_leafPage;
+			free(pageBuffer);
 		}
-	} else {  //no entry to delete
+		
+		ptr_IHPage->writeData(headerBuffer);
+		//write header back to file
+		if(!SUCCEEDED(fileHandle.writePage(0, headerBuffer)))
+			return RC_FILE_WRITE_FAIL;
+		}
+    else 
+	{  //no entry to delete
 		return RC_EMPTY_INDEX;
 	}
 
