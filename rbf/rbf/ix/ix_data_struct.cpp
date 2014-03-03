@@ -363,9 +363,12 @@ void leaf_page<T>::split(leaf_page<T> &newLeafPage)
 }
 
 template <class T>
-void leaf_page<T>::link(int newLeafPageNum) 
+void leaf_page<T>::link(leaf_page<T> &newLeafPage,int newLeafPageNum) 
 {
 	//link two pages
+	if(this->nextPage != -1) {
+		newLeafPage.nextPage = this->nextPage;
+	}
 	this->nextPage = newLeafPageNum;
 }
 

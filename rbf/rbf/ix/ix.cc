@@ -452,7 +452,7 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 	ptr_IHPage->updateAfterNewPage(newLeafPageNum);
 
 	//link two pages - potential problem
-	leafPage.link(newLeafPageNum);
+	leafPage.link(newLeafPage, newLeafPageNum);
 
 	//insert the new entry
 	if(k > leafPage.items[leafPage.itemNum - 1].k) {

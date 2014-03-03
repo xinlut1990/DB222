@@ -36,7 +36,7 @@ struct leaf_page
 	void insertItem(const T &key, const RID &rid);
 	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
 	void split(leaf_page &newLeafPage);
-	void link(int newLeafPageNum);
+	void link(leaf_page &newLeafPage, int newLeafPageNum);
 	RC searhParentEntry(FileHandle &fileHandle, T &key);
 	leaf_page();
 };
@@ -168,9 +168,12 @@ struct leaf_page<string>
 		return RC_SUCCESS;
 	}
 
-	void link(int newLeafPageNum)
+	void link(leaf_page<string> &newLeafPage, int newLeafPageNum)
 	{
 		//link two pages
+		if(this->nextPage != -1) {
+			newLeafPage.nextPage = this->nextPage;
+		}
 		this->nextPage = newLeafPageNum;
 	}
 
