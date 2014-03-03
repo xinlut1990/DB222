@@ -110,34 +110,64 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 			index_page<float> indexPage;
 		else
 			index_page<string> indexPage;*/
-		index_page<int> indexPage;
+
+		if (ptr_IHPage->depth != 1){
+			
+			index_page<int> indexPage;
 		
-		// fetch the info of root page
-		if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
-			return RC_FILE_READ_FAIL;
+			// fetch the info of root page
+			if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
+				return RC_FILE_READ_FAIL;
 
-		indexPage.readData(headerBuffer);
-		if (!indexPage.isRoot)
-			return RC_ROOT_PAGE_READ_FAIL;
+			indexPage.readData(headerBuffer);
+			if (!indexPage.isRoot)
+				return RC_ROOT_PAGE_READ_FAIL;
 
-		// Check to see if the req of root is satisfied
-		if (indexPage.itemNum < 1 || indexPage.itemNum > 2 * ORDER)
-			return RC_INVALID_NUM_OF_ENTRIES;
+			// Check to see if the req of root is satisfied
+			if (indexPage.itemNum < 1 || indexPage.itemNum > 2 * ORDER)
+				return RC_INVALID_NUM_OF_ENTRIES;
 
-		f << "    Root node  " <<"Num: "<<ptr_IHPage->rootPageNum<< "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<" \n\n ";
-		int count = 0;
-		for(int i = 0; i < indexPage.itemNum; i ++ )
-		{
-			f << "   " << indexPage.items[i].k << " ";
-			child_node_index.push_back(indexPage.items[i].p);
-			count++;
-			if ( count >= 10 )
-			{  f << "\n "; count = 0; }
+			f << "    Root node   " <<"Num:"<<ptr_IHPage->rootPageNum<< "   Depth:" << curDepth << "   ItemNum:"<<indexPage.itemNum<<" \n\n ";
+			int count = 0;
+			for(int i = 0; i < indexPage.itemNum; i ++ )
+			{
+				child_node_index.push_back(indexPage.items[i].p);
+				count++;
+				if ( count >= 10 )
+				{  f << "\n "; count = 0; }
+			}
+		
+			f << "\n";
+			curDepth++;
+			f << "-------------------------------------------------------\n";
 		}
+		else
+		{
+
+			leaf_page<int> leafPage;
 		
-		f << "\n";
-		curDepth++;
-		f << "-------------------------------------------------------\n"; 
+			// fetch the info of root page
+			if(!SUCCEEDED(fileHandle.readPage(ptr_IHPage->rootPageNum, headerBuffer)))
+				return RC_FILE_READ_FAIL;
+
+			leafPage.readData(headerBuffer);
+
+			f << "    Leaf Node   " <<"Num:"<<ptr_IHPage->rootPageNum<< "   Depth:" << curDepth << "   ItemNum:"<<leafPage.itemNum<<\
+				"   NextPageNum:"<<leafPage.nextPage<<"\n\n";
+			int count = 0;
+			for(int i = 0; i < leafPage.itemNum; i ++ )
+			{
+				f << "   " << leafPage.items[i].k << " ";
+				child_node_index.push_back(leafPage.items[i].k);
+				count++;
+				if ( count >= 10 )
+				{  f << "\n "; count = 0; }
+			}
+		
+			f << "\n";
+			curDepth++;
+			f << "-------------------------------------------------------\n";
+		}
 	
 	    /**********************************
 	     * non-root page fetch info
@@ -175,7 +205,7 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		            if (indexPage.itemNum < ORDER || indexPage.itemNum > 2 * ORDER)
 						return RC_INVALID_NUM_OF_ENTRIES;
 		                    
-			        f << "    Index (non-root )page  " <<"num: "<<child_node_index.front()<< "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<< "parentPage: "<<indexPage.parentPage<<"\n\n ";
+			        f << "    Index (non-root )page   " <<"Num:"<<child_node_index.front()<< "   Depth:" << curDepth << "   ItemNum:"<<indexPage.itemNum<< "  ParentPage:"<<indexPage.parentPage<<"\n\n ";
 			        int count = 0;
 			        for(int i = 0; i < indexPage.itemNum; i ++ )
 			        {
@@ -213,10 +243,14 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 
 		        	leafPage.readData(pageBuffer);
 
-		        	if (leafPage.itemNum < ORDER || leafPage.itemNum > 2 * ORDER)
-						return RC_INVALID_NUM_OF_ENTRIES;
+		        	//if (leafPage.itemNum < ORDER || leafPage.itemNum > 2 * ORDER)
+					//	return RC_INVALID_NUM_OF_ENTRIES;
 
-		        	f << "    Leaf node  " <<"num: "<<child_node_index.front()<< "Depth : " << curDepth << "itemNum: "<<leafPage.itemNum<< "parentPage: "<<leafPage.parentPage<<"\n\n ";
+					if (leafPage.itemNum < ORDER || leafPage.itemNum > 2 * ORDER)
+						f << "INVALID NUMBER OF ENTRY (leafPage.itemNum) :" << leafPage.itemNum << "n";
+
+		        	f << "    Leaf node   " <<"Num:"<<child_node_index.front()<< "   Depth:" << curDepth << "   ItemNum:"<<leafPage.itemNum\
+						<< "   ParentPage:"<<leafPage.parentPage<<"   NextPageNum:"<<leafPage.nextPage<<"\n\n ";
 			    	int count = 0;
 			    	for(int i = 0; i < leafPage.itemNum; i ++ )
 			    	{
@@ -273,10 +307,12 @@ int IndexManager::searchLeafWith(FileHandle &fileHandle,
 		indexPage.readData(pageBuffer);
 
 		pageNum = indexPage.searchChild(key);
+		
 		//increase depth
 		curDepth++;
 
 	}
+	
 	free(pageBuffer);
 	return pageNum;
 
@@ -411,10 +447,11 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 
 	//need to change
 	int newLeafPageNum = filehandle.getNumberOfPages() - 1;
+
 	//update header
 	ptr_IHPage->updateAfterNewPage(newLeafPageNum);
 
-	//link two pages
+	//link two pages - potential problem
 	leafPage.link(newLeafPageNum);
 
 	//insert the new entry
@@ -460,11 +497,11 @@ RC IndexManager::recursivelyInsert(FileHandle &filehandle,
 	}
 	//write new leaf page back
 	newLeafPage.writeData(newPageBuffer);
+
 	if(!SUCCEEDED(filehandle.writePage(newLeafPageNum, newPageBuffer)))
 		return RC_FILE_WRITE_FAIL;
 	free(newPageBuffer);
 
-		
 	//copy up the first entry of new leaf
 	indexPage.writeData(parentBuffer);
 
@@ -488,7 +525,6 @@ RC IndexManager::insertToLeaf( void *pageBuffer,
 							  const T &key, 
 							  const RID &rid)
 {
-
 	//normal read
 	leaf_page<T> leafPage;
 	leafPage.readData(pageBuffer);
@@ -661,6 +697,7 @@ RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute,
 template <class T>
 RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const T &key, const RID &rid)
 {
+
 	IH_page* ptr_IHPage = new IH_page();
 	if (ptr_IHPage == NULL)
 		return RC_MEM_ALLOCATION_FAIL;
@@ -670,6 +707,8 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 		return RC_MEM_ALLOCATION_FAIL;
 	//init
 	memset(headerBuffer, 0, PAGE_SIZE);
+
+	int curDepth = 1; 
 
 	if(fileHandle.getNumberOfPages() != 0 ) {
 		//get header
@@ -702,18 +741,14 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 			}
 
 			//delete item
-			if(leafPage.isHalf()) {
-				//borrow node
-
-				//merge node
-			} else {
-				if(!leafPage.deleteItem(key, rid)) {
-					return RC_INDEX_DELETE_FAIL;
-				} else {
+			if(!leafPage.deleteItem(key, rid)) 
+			{
+				return RC_INDEX_DELETE_FAIL;
+			} 
+			else 
+			{
 					leafPage.writeData(pageBuffer);
-				}
 			}
-
 
 			ptr_IHPage->writeData(headerBuffer);
 			//write header back to file
@@ -726,10 +761,11 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 
 			free(pageBuffer);
 
-		} else { //regular case 
+		} else { //regular case
 			// A lazy deletion is adequate in terms of testing cases. In this approach, when an entry is deleted, even if it 
 			// causes a leaf page to become less than half full, no redistribution or node merging takes place. Underfilled node
 			// is allowed in this case according to project specifications.
+			//while(curDepth <= ptr_IHPage->depth) 
 			void *pageBuffer = (void*)malloc(PAGE_SIZE);
 			if (pageBuffer == NULL)
 				return RC_MEM_ALLOCATION_FAIL;
@@ -744,7 +780,6 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 			/******************************************************
 			 * Starts of deletion
 			 ******************************************************/
-
 			// ptr_leafPage
 			leaf_page<T> *ptr_leafPage = new leaf_page<T>();
 			ptr_leafPage->readData(pageBuffer);
@@ -757,7 +792,7 @@ RC IndexManager::deleteEntryByType(FileHandle &fileHandle, AttrType type, const 
 
 			// Given that a lazy deletion would be implemented in this case, thus
 			// it is not necessary to check to see if following req is satisfied or not
-		    //if (ptr_leafPage->->itemNum < ORDER || ptr_leafPage->->itemNum > 2 * ORDER)
+		    //if (ptr_leafPage->itemNum < ORDER || ptr_leafPage->itemNum > 2 * ORDER)
 			//	return RC_INVALID_NUM_OF_ENTRIES;
 			
 			if(!ptr_leafPage->deleteItem(key, rid)) 
@@ -910,6 +945,7 @@ RC IndexManager::scanByType(FileHandle &fileHandle,
 	//search for leaf page with key
 	int leafPageNum = searchLeafWith<T>(fileHandle, ptr_IHPage->rootPageNum, ptr_IHPage->depth, lowKey);
 
+	
 	while(leafPageNum != -1) {
 		if(!SUCCEEDED(fileHandle.readPage(leafPageNum, pageBuffer)))
 			return RC_FILE_READ_FAIL;
@@ -922,7 +958,6 @@ RC IndexManager::scanByType(FileHandle &fileHandle,
 			}
 		}
 		leafPageNum = leafPage.nextPage;
-
 	}
 	
 

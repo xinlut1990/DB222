@@ -209,13 +209,6 @@ int testCase_5(const string &indexFileName, const Attribute &attribute)
         }
         inRidPageNumSum += rid.pageNum;
     }
-	rc = indexManager->printIndex (fileHandle, attribute);
-	if (rc != success)
-	{
-		cout << "Failed printing out index tree... "<<endl;
-		goto error_close_index;
-	}
-
 
     // Test Open Scan
     rc= indexManager->scan(fileHandle, attribute, &value, NULL, true, true, ix_ScanIterator);
@@ -895,7 +888,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
     }
 
     // insert entry
-    numOfTuples = 30000;
+    //numOfTuples = 30000;
+	numOfTuples = 5000;
     for(int i = 0; i < numOfTuples; i++)
     {
         A[i] = i;
@@ -917,8 +911,17 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
             goto error_close_index;
         }
     }
-	indexManager->printIndex(fileHandle, attribute);
+
+
+	rc = indexManager->printIndex (fileHandle, attribute);
+	if (rc != success)
+	{
+		cout << "Failed printing out index tree... "<<endl;
+		goto error_close_index;
+	}
     //scan
+	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size() << endl;
+
     compVal = 20000;
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
     if(rc == success)
@@ -930,6 +933,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Opening Scan..." << endl;
         goto error_close_index;
     }
+	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size() << endl;
 
     // Test DeleteEntry in IndexScan Iterator
     count = 0;
@@ -947,6 +951,8 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
         count++;
     }
+
+
     cout << "Number of deleted entries: " << count << endl;
     if (count != 20001)
     {
@@ -1156,6 +1162,7 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Opening Scan..." << endl;
         goto error_close_index;
     }
+	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size();
 
     // Test DeleteEntry in IndexScan Iterator
     count = 0;
@@ -1778,10 +1785,10 @@ void test()
 	attrEmpName.type = TypeVarChar;
 
     //testCase_4B(indexAgeFileName, attrAge);
-    testCase_5(indexAgeFileName, attrAge);
-    testCase_6(indexHeightFileName, attrHeight);
-    testCase_7(indexHeightFileName, attrHeight);
-    testCase_8(indexHeightFileName, attrHeight);
+    //testCase_5(indexAgeFileName, attrAge);
+    //testCase_6(indexHeightFileName, attrHeight);
+    //testCase_7(indexHeightFileName, attrHeight);
+    //testCase_8(indexHeightFileName, attrHeight);
     testCase_9(indexAgeFileName, attrAge);
     //testCase_10(indexHeightFileName, attrHeight);
 

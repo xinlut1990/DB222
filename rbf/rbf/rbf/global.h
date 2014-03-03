@@ -38,4 +38,5 @@ static const int RC_LEAF_PAGE_FULL = 23;
 static const int RC_ROOT_PAGE_READ_FAIL = 24;
 static const int RC_INVALID_NUM_OF_ENTRIES = 25;
 static const int RC_PAGE_OVERFLOW = 26;//when exceeding max page number
+static const int RC_READ_PARENT_PAGE_FILE = 27;
 #endif

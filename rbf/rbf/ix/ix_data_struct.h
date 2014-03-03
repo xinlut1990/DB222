@@ -37,7 +37,7 @@ struct leaf_page
 	bool deleteItem(const T &key, const RID &rid); // return false if key not exist
 	void split(leaf_page &newLeafPage);
 	void link(int newLeafPageNum);
-
+	RC searhParentEntry(FileHandle &fileHandle, T &key);
 	leaf_page();
 };
 
@@ -139,6 +139,35 @@ struct leaf_page<string>
 		this->itemNum = halfSize;
 	}
 
+    RC searhParentEntry(FileHandle &fileHandle, string &key) //Jin0302
+    {
+		
+		void *pageBuffer = (void*)malloc(PAGE_SIZE);
+		if (pageBuffer == NULL)
+			return RC_MEM_ALLOCATION_FAIL;
+		
+		// fetch the info of parent page
+		if(!SUCCEEDED(fileHandle.readPage(this->parentPage, pageBuffer)))
+			return RC_FILE_READ_FAIL;
+
+		this->readData(pageBuffer);
+		if (this->itemNum == 0)
+			return RC_EMPTY_INDEX;
+
+		for( int i = 0; i < this->itemNum; i++)
+		{
+			if ( this->items[i].k > key )
+			{
+				key = this->items[i].k;
+				break;
+			}
+			if ( i == this->itemNum - 1)
+				return RC_READ_PARENT_PAGE_FILE;
+		}
+
+		return RC_SUCCESS;
+	}
+
 	void link(int newLeafPageNum)
 	{
 		//link two pages
@@ -181,6 +210,8 @@ struct index_page
 	bool deleteItem(int index);
 	void split(index_page &newIndexPage);
 	RC updateParentForChildren(FileHandle &fileHandle, int myPageNum, bool leafBelow);
+	RC deleteEntry(FileHandle &fileHandle, T &key);
+	RC searhParentEntry(FileHandle &fileHandle, T &key);
 	int searchChild(const T &key);
 	index_page();
 };
@@ -313,6 +344,75 @@ struct index_page<string>
 				return RC_FILE_WRITE_FAIL;
 		}
 		free(pageBuffer);
+		return RC_SUCCESS;
+	}
+
+	RC searhParentEntry(FileHandle &fileHandle, string &key) //Jin0302
+	{
+		void *pageBuffer = (void*)malloc(PAGE_SIZE);
+		if (pageBuffer == NULL)
+			return RC_MEM_ALLOCATION_FAIL;
+		
+		// fetch the info of parent page
+		if(!SUCCEEDED(fileHandle.readPage(this->parentPage, pageBuffer)))
+			return RC_FILE_READ_FAIL;
+
+		this->readData(pageBuffer);
+		if (this->itemNum == 0)
+			return RC_EMPTY_INDEX;
+
+		for( int i = 0; i < this->itemNum; i++)
+		{
+			if ( this->items[i].k > key )
+			{
+				key = this->items[i].k;
+				break;
+			}
+			if ( i == this->itemNum - 1)
+				return RC_READ_PARENT_PAGE_FILE;
+		}
+
+		return RC_SUCCESS;
+	}
+
+    RC deleteEntry(FileHandle &fileHandle, string &key) //Jin0203
+	{
+
+		void *pageBuffer = (void*)malloc(PAGE_SIZE);
+		if (pageBuffer == NULL)
+			return RC_MEM_ALLOCATION_FAIL;
+
+		int delete_entry_id;
+
+		for( int delete_entry_id = 0; delete_entry_id < this->itemNum; delete_entry_id++)
+		{
+			if ( this->items[delete_entry_id].k == key )
+			{
+				for( int i = delete_entry_id; i < this->itemNum - 1; i++ )
+					this->items[i]=this->items[i+1];
+				this->itemNum--;
+				break;
+			}
+		}
+		if(this->itemNum == 0 && !this->isRoot)
+		{
+			void *parentPageBuffer = (void*)malloc(PAGE_SIZE);
+			if (parentPageBuffer == NULL)
+				return RC_MEM_ALLOCATION_FAIL;
+
+			//read parent index page
+	    	if(!SUCCEEDED(fileHandle.readPage(this->parentPage, parentPageBuffer)))
+				return RC_FILE_READ_FAIL;
+		
+			string parent_data_entry_key;
+			this->searhParentEntry(fileHandle, parent_data_entry_key);
+
+			index_page<string> indexPage;
+			indexPage.readData(parentPageBuffer);;
+
+			indexPage.deleteEntry(fileHandle, parent_data_entry_key);
+		}
+	
 		return RC_SUCCESS;
 	}
 
