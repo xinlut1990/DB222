@@ -909,13 +909,15 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         rid.slotNum = i+1;
 
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
+		if(i == 1000)
+			//indexManager->printIndex(fileHandle, attribute);
         if(rc != success)
         {
             cout << "Failed Inserting Keys..." << endl;
             goto error_close_index;
         }
     }
-
+	indexManager->printIndex(fileHandle, attribute);
     //scan
     compVal = 20000;
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
@@ -1781,14 +1783,14 @@ void test()
     testCase_7(indexHeightFileName, attrHeight);
     testCase_8(indexHeightFileName, attrHeight);
     testCase_9(indexAgeFileName, attrAge);
-    testCase_10(indexHeightFileName, attrHeight);
+    //testCase_10(indexHeightFileName, attrHeight);
 
     // Extra Credit Work
     // Duplicat Entries
-    testCase_extra_1(indexAgeFileName, attrAge);
-    testCase_extra_2(indexAgeFileName, attrAge);
+    //testCase_extra_1(indexAgeFileName, attrAge);
+    //testCase_extra_2(indexAgeFileName, attrAge);
     // TypeVarChar - mandatory for graduate students
-    testCase_extra_3(indexEmpNameFileName, attrEmpName);
+    //testCase_extra_3(indexEmpNameFileName, attrEmpName);
     return;
 }
 

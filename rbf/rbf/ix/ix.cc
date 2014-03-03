@@ -48,7 +48,7 @@ RC IndexManager::closeFile(FileHandle &fileHandle)
 
 RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 {
-
+	fstream f("report.txt");
 	IH_page* ptr_IHPage = new IH_page();
     vector<int> child_node_index;
 	int curDepth = 1;
@@ -77,14 +77,14 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		ptr_IHPage->readData(headerBuffer);
 
 		// Report header format
-		cout << "-------------------------------------------------------\n";
-		cout << "    Summary\n";
-		cout << "\n";
-		cout << "    Order of B+ Tree is : " << ORDER <<"\n";
-		cout << "    Depth of B+ Tree    : " << ptr_IHPage->depth << "\n";
-	    cout << "    Root page # is      : " << ptr_IHPage->pageNum << "\n";
-		cout << "\n";                                                       
-		cout << "-------------------------------------------------------\n"; 
+		f << "-------------------------------------------------------\n";
+		f << "    Summary\n";
+		f << "\n";
+		f << "    Order of B+ Tree is : " << ORDER <<"\n";
+		f << "    Depth of B+ Tree    : " << ptr_IHPage->depth << "\n";
+	    f << "    page # is      : " << ptr_IHPage->pageNum << "\n";
+		f << "\n";                                                       
+		f << "-------------------------------------------------------\n"; 
 		memset(headerBuffer, 0, PAGE_SIZE);
 
 		/**************************************
@@ -124,20 +124,20 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		if (indexPage.itemNum < 1 || indexPage.itemNum > 2 * ORDER)
 			return RC_INVALID_NUM_OF_ENTRIES;
 
-		cout << "    Root node  " << "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<"\n\n ";
+		f << "    Root node  " <<"Num: "<<ptr_IHPage->rootPageNum<< "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<" \n\n ";
 		int count = 0;
 		for(int i = 0; i < indexPage.itemNum; i ++ )
 		{
-			cout << "   " << indexPage.items[i].k << " ";
+			f << "   " << indexPage.items[i].k << " ";
 			child_node_index.push_back(indexPage.items[i].p);
 			count++;
 			if ( count >= 10 )
-			{  cout << "\n "; count = 0; }
+			{  f << "\n "; count = 0; }
 		}
 		
-		cout << "\n";
+		f << "\n";
 		curDepth++;
-		cout << "-------------------------------------------------------\n"; 
+		f << "-------------------------------------------------------\n"; 
 	
 	    /**********************************
 	     * non-root page fetch info
@@ -166,7 +166,7 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 					memset(pageBuffer, 0, PAGE_SIZE);
 			                
 					// fetch the info
-					cout << child_node_index.front() <<endl;
+					f << child_node_index.front() <<endl;
 		            if(!SUCCEEDED(fileHandle.readPage(child_node_index.front(), pageBuffer)))
 						return RC_FILE_READ_FAIL;
 					
@@ -175,19 +175,19 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		            if (indexPage.itemNum < ORDER || indexPage.itemNum > 2 * ORDER)
 						return RC_INVALID_NUM_OF_ENTRIES;
 		                    
-			        cout << "    Index (non-root )page  " << "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<<"\n\n ";
+			        f << "    Index (non-root )page  " <<"num: "<<child_node_index.front()<< "Depth : " << curDepth << "itemNum: "<<indexPage.itemNum<< "parentPage: "<<indexPage.parentPage<<"\n\n ";
 			        int count = 0;
 			        for(int i = 0; i < indexPage.itemNum; i ++ )
 			        {
-						cout << "   " << indexPage.items[i].k << " ";
+						f << "   " << indexPage.items[i].k << " ";
 						child_node_index.push_back(indexPage.items[i].p);
 						count++;
 						if ( count >= 10 )
-						{  cout << "\n "; count = 0; }
+						{  f << "\n "; count = 0; }
 					}
 		            child_node_index.erase(child_node_index.begin());
-					cout << "\n";
-					cout << "-------------------------------------------------------\n"; 
+					f << "\n";
+					f << "-------------------------------------------------------\n"; 
 
 				}
 				curDepth++;
@@ -216,26 +216,26 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		        	if (leafPage.itemNum < ORDER || leafPage.itemNum > 2 * ORDER)
 						return RC_INVALID_NUM_OF_ENTRIES;
 
-		        	cout << "    Leaf node  " << "Depth : " << curDepth << "itemNum: "<<leafPage.itemNum<<"\n\n ";
+		        	f << "    Leaf node  " <<"num: "<<child_node_index.front()<< "Depth : " << curDepth << "itemNum: "<<leafPage.itemNum<< "parentPage: "<<leafPage.parentPage<<"\n\n ";
 			    	int count = 0;
 			    	for(int i = 0; i < leafPage.itemNum; i ++ )
 			    	{
-						cout << "   " << leafPage.items[i].k << " ";
+						f << "   " << leafPage.items[i].k << " ";
 						count++;
 						if ( count >= 10 )
-						{  cout << "\n "; count = 0; }
+						{  f << "\n "; count = 0; }
 					}
 		        	
 					child_node_index.erase(child_node_index.begin());
-					cout << "\n";
-					cout << "-------------------------------------------------------\n"; 
+					f << "\n";
+					f << "-------------------------------------------------------\n"; 
 
 				}
 				curDepth++;
 			}
 			free (pageBuffer);
 	}
-	
+		f.close();
 	free (headerBuffer);
 
 	return RC_SUCCESS;

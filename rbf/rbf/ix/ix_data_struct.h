@@ -6,7 +6,7 @@
 
 using namespace std;
 
-# define ORDER (20)
+# define ORDER (100)
 # define INDEX (1)
 # define LEAF (2)
 
@@ -76,7 +76,6 @@ struct leaf_page<string>
 	}
 	void insertItem(const string &key, const RID &rid)
 	{
-
 		if(this->itemNum == 0) {
 			items[0].k = key;
 			items[0].rid = rid;
@@ -96,9 +95,13 @@ struct leaf_page<string>
 				items[i + 1].k = key;
 				items[i + 1].rid = rid;
 				this->itemNum++;
-				break;
+				return;
 			}
 		}
+	
+		items[0].k = key;
+		items[0].rid = rid;
+		this->itemNum++;
 	}
 
 	bool deleteItem(const string &key, const RID &rid) // return false if key not exist
@@ -235,9 +238,13 @@ struct index_page<string>
 				items[i + 1].k = key;
 				items[i + 1].p = pageNum;
 				this->itemNum++;
-				break;
+				return;
 			}
 		}
+
+		items[0].k = key;
+		items[0].p = pageNum;
+		this->itemNum++;
 	}
 
 	bool deleteItem(int index)

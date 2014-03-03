@@ -51,9 +51,13 @@ void index_page<T>::insertItem(const T &key, const int pageNum)
 			items[i + 1].k = key;
 			items[i + 1].p = pageNum;
 			this->itemNum++;
-			break;
+			return;
 		}
 	}
+
+	items[0].k = key;
+	items[0].p = pageNum;
+	this->itemNum++;
 }
 
 template <class T>
@@ -210,9 +214,13 @@ void leaf_page<T>::insertItem(const T &key, const RID &rid)
 			items[i + 1].k = key;
 			items[i + 1].rid = rid;
 			this->itemNum++;
-			break;
+			return;
 		}
 	}
+	
+	items[0].k = key;
+	items[0].rid = rid;
+	this->itemNum++;
 }
 
 template <class T>

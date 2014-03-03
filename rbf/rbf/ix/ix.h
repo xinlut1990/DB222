@@ -4,12 +4,13 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 #include "../rbf/rbfm.h"
 #include "ix_data_struct.h"
 
 # define IX_EOF (-1)  // end of the index scan
-# define MAX_PAGE_NUM (400)
+# define MAX_PAGE_NUM (1000)
 
 # define FREED (1)
 # define IN_USE (2)
@@ -132,8 +133,8 @@ void IX_PrintError (RC rc);
 
 struct page_entry
 {
-	unsigned pageNum;
-	unsigned status;
+	char pageNum;
+	char status;
 };
 
 //index header 
