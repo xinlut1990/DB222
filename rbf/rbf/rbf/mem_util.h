@@ -110,6 +110,18 @@ class reader<string>
 	public:
 	static inline string readFromBuffer(const void *buffer, int &offset) {
 
+		char *strBuffer = new char[100];
+	    memcpy(strBuffer, buffer, 100);
+
+	    int length = strBuffer[0];
+		
+		char *k = &strBuffer[4];
+		string str_data (k, length);
+		
+		delete [] strBuffer;
+
+	    return str_data;
+		/*
 		//string length
 		int *pStrLen = (int*)malloc(sizeof(int));
 		if (pStrLen == NULL) {
@@ -134,7 +146,7 @@ class reader<string>
 
 		string s(str);
 		free(str);
-		return s;
+		return s;*/
 	};
 
 	static inline void writeStrToBuffer(void *buffer, int &offset, const string &value) {
