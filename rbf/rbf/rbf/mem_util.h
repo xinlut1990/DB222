@@ -111,7 +111,7 @@ class reader<string>
 	static inline string readFromBuffer(const void *buffer, int &offset) {
 
 		char *strBuffer = new char[100];
-	    memcpy(strBuffer, buffer, 100);
+	    memcpy(strBuffer, (char*)buffer + offset, 100);
 
 	    int length = strBuffer[0];
 		
@@ -149,7 +149,7 @@ class reader<string>
 		return s;*/
 	};
 
-	static inline void writeStrToBuffer(void *buffer, int &offset, const string &value) {
+	static inline void writeToBuffer(void *buffer, int &offset, const string &value) {
 		int strLen = value.length();
 		memcpy((char *)buffer + offset, &strLen, sizeof(int));
 		offset += sizeof(int);    

@@ -51,18 +51,32 @@ struct leaf_page<string>
 
 	void readData(const void *data)
 	{
+
 		//!!hacky way to solve the case when the leaf page is first created
 		//and has no data;
 		int next_page;
 		memcpy(&next_page,data,sizeof(int));
 		//no data, cuz page 0 is header!!!
 		if(next_page != 0) {
-			memcpy(this,data,sizeof(leaf_page<string>));
+
+			memcpy(this, data, 3 * sizeof(int));
+			int offset = 3 * sizeof(int);
+			for(int i = 0; i < this->itemNum; i++) {
+				this->items[i].k = reader<string>::readFromBuffer(data, offset);
+				memcpy(&(this->items[i].rid), (char*)data + offset, sizeof(RID));
+				offset += sizeof(RID);
+			}
 		}
 	}
 	void writeData(void *data) const
 	{
-		memcpy(data,this,sizeof(leaf_page<string>));
+			memcpy(data, this, 3 * sizeof(int));
+			int offset = 3 * sizeof(int);
+			for(int i = 0; i < this->itemNum; i++) {
+				reader<string>::writeToBuffer(data, offset, this->items[i].k);
+				memcpy((char*)data + offset, &(this->items[i].rid), sizeof(RID));
+				offset += sizeof(RID);
+			}
 	}
 	bool isFull() const
 	{
@@ -230,12 +244,22 @@ struct index_page<string>
 
 	void readData(const void *data)
 	{
-		memcpy(this,data,sizeof(index_page<string>));
+		memcpy(this, data, 1 + 3 * sizeof(int));
+		int offset = 1 + 3 * sizeof(int);
+		for(int i = 0; i < this->itemNum; i++) {
+			this->items[i].k = reader<string>::readFromBuffer(data, offset);
+			this->items[i].p = readIntFromBuffer(data, offset);
+		}
 	}
 
 	void writeData(void *data) const
 	{
-		memcpy(data,this,sizeof(index_page<string>));
+		memcpy(data, this, 1 + 3 * sizeof(int));
+		int offset = 1 + 3 * sizeof(int);
+		for(int i = 0; i < this->itemNum; i++) {
+			reader<string>::writeToBuffer(data, offset, this->items[i].k);
+			reader<int>::writeToBuffer(data, offset, this->items[i].p);
+		}
 	}
 
 	bool isFull() const

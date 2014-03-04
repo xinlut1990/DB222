@@ -1783,7 +1783,7 @@ void test()
 	attrEmpName.name = "EmpName";
 	attrEmpName.type = TypeVarChar;
 
-    //testCase_4B(indexAgeFileName, attrAge);
+    testCase_4B(indexAgeFileName, attrAge);
     testCase_5(indexAgeFileName, attrAge);
     testCase_6(indexHeightFileName, attrHeight);
     testCase_7(indexHeightFileName, attrHeight);
@@ -1793,8 +1793,8 @@ void test()
 
     // Extra Credit Work
     // Duplicat Entries
-    testCase_extra_1(indexAgeFileName, attrAge);
-    testCase_extra_2(indexAgeFileName, attrAge);
+    //testCase_extra_1(indexAgeFileName, attrAge);
+    //testCase_extra_2(indexAgeFileName, attrAge);
     // TypeVarChar - mandatory for graduate students
     testCase_extra_3(indexEmpNameFileName, attrEmpName);
     return;
