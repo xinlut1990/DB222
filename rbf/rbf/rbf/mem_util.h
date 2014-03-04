@@ -1,39 +1,43 @@
 #ifndef _mem_util_h_
 #define _mem_util_h_
+
 #include <malloc.h>
+#include <iomanip>
 #include <stdlib.h>
 #include <iostream>
 #include <string>
+#include <cstring>
+
 using namespace std;
 
 inline void writeIntToBuffer(void *buffer, int &offset, int num) {
-    memcpy((char *)buffer + offset, &num, sizeof(int));
+    memcpy( (char *)buffer + offset, &num, sizeof(int) );
     offset += sizeof(int);    
 }
 
 inline void writeFloatToBuffer(void *buffer, int &offset, float num) {
-    memcpy((char *)buffer + offset, &num, sizeof(float));
+    memcpy( (char *)buffer + offset, &num, sizeof(float) );
     offset += sizeof(float);    
 }
 
 inline void writeStrToBuffer(void *buffer, int &offset, const string &str) {
 	int strLen = str.length();
-    memcpy((char *)buffer + offset, &strLen, sizeof(int));
+    memcpy( (char *)buffer + offset, &strLen, sizeof(int) );
     offset += sizeof(int);    
-    memcpy((char *)buffer + offset, str.c_str(), strLen);
+    memcpy( (char *)buffer + offset, str.c_str(), strLen );
     offset += strLen;
 }
 
 inline void copyIntBetweenBuffer(void *dest, int &destOffset, const void *src, int &srcOffset)
 {
-	memcpy((char *)dest + destOffset, (char*)src + srcOffset, sizeof(int));
+	memcpy( (char *)dest + destOffset, (char*)src + srcOffset, sizeof(int) );
 	destOffset += sizeof(int);
 	srcOffset += sizeof(int); 
 }
 
 inline void copyFloatBetweenBuffer(void *dest, int &destOffset, const void *src, int &srcOffset)
 {
-	memcpy((char *)dest + destOffset, (char*)src + srcOffset, sizeof(float));
+	memcpy( (char *)dest + destOffset, (char*)src + srcOffset, sizeof(float) );
 	destOffset += sizeof(int);
 	srcOffset += sizeof(int); 
 }
@@ -41,9 +45,9 @@ inline void copyFloatBetweenBuffer(void *dest, int &destOffset, const void *src,
 inline void copyStrBetweenBuffer(void *dest, int &destOffset, const void *src, int &srcOffset)
 {
 	int* pStrLen = new int;
-	memcpy(pStrLen, (char*)src + srcOffset, sizeof(int));
+	memcpy( pStrLen, (char*)src + srcOffset, sizeof(int) );
 	srcOffset += sizeof(int); 
-	memcpy((char*)dest + destOffset, pStrLen, sizeof(int));
+	memcpy( (char*)dest + destOffset, pStrLen, sizeof(int) );
 	destOffset += sizeof(int);
 
 	memcpy((char *)dest + destOffset, (char*)src + srcOffset, *pStrLen);
@@ -83,7 +87,7 @@ inline char * buildStrFromBuffer(const void *buffer, int &offset) {
 inline int readIntFromBuffer(const void *buffer, int &offset)
 {
 	int num = 0;
-	memcpy(&num, (char*)buffer + offset, sizeof(int));
+	memcpy( &num, (char*)buffer + offset, sizeof(int) );
 	offset += sizeof(int);
 	return num;
 }
@@ -91,7 +95,7 @@ inline int readIntFromBuffer(const void *buffer, int &offset)
 inline float readFloatFromBuffer(const void *buffer, int &offset)
 {
 	float num = 0.0;
-	memcpy(&num, (char*)buffer + offset, sizeof(float));
+	memcpy( &num, (char*)buffer + offset, sizeof(float) );
 	offset += sizeof(float);
 	return num;
 }
@@ -151,9 +155,9 @@ class reader<string>
 
 	static inline void writeToBuffer(void *buffer, int &offset, const string &value) {
 		int strLen = value.length();
-		memcpy((char *)buffer + offset, &strLen, sizeof(int));
+		memcpy( (char *)buffer + offset, &strLen, sizeof(int) );
 		offset += sizeof(int);    
-		memcpy((char *)buffer + offset, value.c_str(), strLen);
+		memcpy( (char *)buffer + offset, value.c_str(), strLen);
 		offset += strLen;
 	}
 };
@@ -165,13 +169,13 @@ public:
 	static inline int readFromBuffer(const void *buffer, int &offset)
 	{
 		int num = 0;
-		memcpy(&num, (char*)buffer + offset, sizeof(int));
+		memcpy( &num, (char*)buffer + offset, sizeof(int) );
 		offset += sizeof(int);
 		return num;
 	};
 
 	static inline void writeToBuffer(void *buffer, int &offset, const int &value) {
-		memcpy((char *)buffer + offset, &value, sizeof(int));
+		memcpy( (char *)buffer + offset, &value, sizeof(int) );
 		offset += sizeof(int);    
 	}
 };
@@ -189,7 +193,7 @@ public:
 	};
 
 	static inline void writeToBuffer(void *buffer, int &offset, const float &value) {
-		memcpy((char *)buffer + offset, &value, sizeof(float));
+		memcpy( (char *)buffer + offset, &value, sizeof(float) );
 		offset += sizeof(float);    
 	}
 };

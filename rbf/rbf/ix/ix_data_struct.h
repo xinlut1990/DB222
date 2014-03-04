@@ -2,6 +2,11 @@
 #define _ix_ds_
 
 #include <string>
+#include <string.h>
+#include <cstring>
+#include <malloc.h>
+#include <iomanip>
+#include <stdlib.h>
 #include "..\rbf\rbfm.h"
 
 using namespace std;
@@ -197,7 +202,7 @@ struct leaf_page<string>
 		//no next page
 		this->nextPage = -1;
 		this->itemNum = 0;
-		initArray(this->items, sizeof(leaf_item<string>), 2 * ORDER);
+		//initArray(this->items, sizeof(leaf_item<string>), 2 * ORDER);
 	
 	}
 };

@@ -1,6 +1,9 @@
 #include "ix.h"
 #include <malloc.h>
+#include <stdlib.h>
+#include <iomanip>
 #include <vector>
+#include <cstring>
 #include "ix_data_struct.cpp"
 using namespace std;
 
@@ -673,7 +676,7 @@ RC IndexManager::insertEntryByType(FileHandle &fileHandle, AttrType type, const 
 	}
 
 	free(headerBuffer);
-	free(ptr_IHPage);
+	delete ptr_IHPage;
 
 	return RC_SUCCESS;
 }
@@ -963,7 +966,7 @@ RC IndexManager::scanByType(FileHandle &fileHandle,
 
 	free(pageBuffer);
 	free(headerBuffer);
-	free(ptr_IHPage);
+	delete ptr_IHPage;
 	return RC_SUCCESS;
 }
 
