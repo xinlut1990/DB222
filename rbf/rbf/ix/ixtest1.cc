@@ -124,8 +124,6 @@ int testCase_2(const string &indexFileName, const Attribute &attribute)
         }
     }
 
-
-
     // delete entry
     rc = indexManager->deleteEntry(fileHandle, attribute, &age, rid);
     if(rc != success)
@@ -271,17 +269,6 @@ int testCase_4A(const string &indexFileName, const Attribute &attribute)
         }
         inRidPageNumSum += rid.pageNum;
     }
-
-		/*
-	 *
-	 *print out B+ tree
-	 */
-    /*rc = indexManager->print(fileHandle, attribute.type);
-    if(rc != success)
-    {
-		cout << "Failed Accessing Entry..." << endl;
-        goto error_close_index;
-    }*/
 
     // Scan
     rc = indexManager->scan(fileHandle, attribute, NULL, NULL, true, true, ix_ScanIterator);
