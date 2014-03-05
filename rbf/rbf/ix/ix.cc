@@ -210,10 +210,10 @@ RC IndexManager::printIndex(FileHandle &fileHandle, const Attribute &attribute)
 		                    
 			        f << "    Index (non-root )page   " <<"Num:"<<child_node_index.front()<< "   Depth:" << curDepth << "   ItemNum:"<<indexPage.itemNum<< "  ParentPage:"<<indexPage.parentPage<<"\n\n ";
 			        int count = 0;
-			        for(int i = 0; i < indexPage.itemNum; i ++ )
+			        for(int j = 0; j < indexPage.itemNum; j ++ )
 			        {
-						f << "   " << indexPage.items[i].k << " ";
-						child_node_index.push_back(indexPage.items[i].p);
+						f << "   " << indexPage.items[j].k << " ";
+						child_node_index.push_back(indexPage.items[j].p);
 						count++;
 						if ( count >= 10 )
 						{  f << "\n "; count = 0; }

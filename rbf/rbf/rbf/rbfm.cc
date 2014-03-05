@@ -1,6 +1,3 @@
-#define _CRT_SECURE_NO_DEPRECATE 
-#define _CRT_NONSTDC_NO_DEPRECATE
-
 #include "rbfm.h"
 
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data) { 
@@ -14,7 +11,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data) {
 	  if(!SUCCEEDED( rbfm->openFile(fileName, fileHandle) ))
 		return RC_FILE_OPEN_FAIL;
 
-	  void *recordData = malloc(length * 2);//TODO: how to deal with this hacky length?
+	  void *recordData = malloc(length * 2);
 	  rbfm->readRecord(fileHandle, recordDescriptor, rid, recordData);
 	  rbfm->projectRecord(data, recordData, recordDescriptor, attributeNames);
 
@@ -583,6 +580,7 @@ void HFPage::expand(void *data, const void *updated_data, unsigned slot_number,u
 		if( this->slot[i].record_length != EMPTY_SLOT && this->slot[i].record_length != TOMBSTONE_SLOT)
 			slot_t.push_back(make_pair(slot[i], i));
 	}
+	// GCC currently doesn't provide support for lambda expression.
 	// sort the SLot_t vector according to slot offset in ascending order
 	// sort(slot_t.begin(),slot_t.end(), [](const pair<Slot_t, int> &a, const pair<Slot_t, int> &b) {return a.first.record_offset < b.first.record_offset;} );	
 	sort(slot_t.begin(),slot_t.end(), compare_Slot);
@@ -649,6 +647,7 @@ void HFPage::merge(void *data)
 		if( this->slot[i].record_length != EMPTY_SLOT && this->slot[i].record_length != TOMBSTONE_SLOT)
 			slot_t.push_back(make_pair(slot[i], i));
 	}
+	// GCC currently doesn't provide support for lambda expression.
 	// sort the SLot_t vector accordinf to slot offset in ascending order
 	// sort(slot_t.begin(),slot_t.end(), [](const pair<Slot_t, int> &a, const pair<Slot_t, int> &b) {return a.first.record_offset < b.first.record_offset;} );
 	sort(slot_t.begin(), slot_t.end(), compare_Slot);
@@ -838,7 +837,8 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,const vector<Attribute> &
 	rbfm_ScanIterator.length = this->getMaxLength(recordDescriptor);
 
 	vector<Attribute>::const_iterator attr_it = recordDescriptor.begin();
-	//attr_it = find_if( recordDescriptor.begin(), recordDescriptor.end(), [conditionAttribute](const Attribute &a) {return a.name == conditionAttribute;});
+	// GCC currently doesn't provide support for lambda expression.
+	// attr_it = find_if( recordDescriptor.begin(), recordDescriptor.end(), [conditionAttribute](const Attribute &a) {return a.name == conditionAttribute;});
 	while ( attr_it != recordDescriptor.end() )
 	{
 		if ( (*attr_it).name == conditionAttribute )
@@ -881,16 +881,6 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,const vector<Attribute> &
 				if( ! match_condition )
 					continue;
 
-				//read current line, 
-
-				//todo:change the length!!
-
-				//if we only need rid
-				/*if(!attributeNames.empty()) {
-					void *recordData = malloc(this->getMaxLength(recordDescriptor));
-
-					free(recordData);
-				} */
 				rbfm_ScanIterator.scanList.push_back(rid);
 					
 			}
