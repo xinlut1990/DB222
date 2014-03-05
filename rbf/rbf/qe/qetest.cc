@@ -296,7 +296,7 @@ int populateLeftVarCharTable() {
 
 		int length = (i % 26) + 1;
 		string b;
-		for (unsigned j = 0; j < length; j++) {
+		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
 		prepareLeftVarCharTuple(a, length, b, buf);
@@ -325,7 +325,7 @@ int populateRightVarCharTable() {
 		// Prepare the tuple data for insertion
 		int length = (i % 26) + 1;
 		string b;
-		for (unsigned j = 0; j < length; j++) {
+		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
 
@@ -507,7 +507,7 @@ int testCase_4() {
 	*(float *) value.data = compVal;
 	cond.rhsValue = value;
 
-	int expectedResultCnt = 125; //100.00 ~ 124.00;
+	int expectedResultCnt = 25; //100.00 ~ 124.00;
 	int actualResultCnt = 0;
 
 	// Create Filter
@@ -1052,7 +1052,7 @@ int testCase_10() {
 	cond.bRhsIsAttr = true;
 	cond.rhsAttr = "right.B";
 
-	int expectedResultcnt = 6840;
+	int expectedResultcnt = 5995;
 	int actualResultCnt = 0;
 
 	// Create NLJoin
@@ -1152,7 +1152,7 @@ int testCase_11() {
 		cout << "leftvarchar.B " << b << endl;
 
 		memset(data, 0, bufSize);
-		++actualResultCnt = 0;
+		++actualResultCnt;
 	}
 
 	if (expectedResultCnt != actualResultCnt) {
@@ -1464,7 +1464,7 @@ int main() {
 		goto print_point;
 	}
 
-	if (testCase_2() == success) {
+	if (testCase_2() != success) {
 		goto print_point;
 	}
 	g_nGradPoint += 5;
