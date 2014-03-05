@@ -902,8 +902,6 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         rid.slotNum = i+1;
 
         rc = indexManager->insertEntry(fileHandle, attribute, &key, rid);
-		if(i == 1000)
-			//indexManager->printIndex(fileHandle, attribute);
         if(rc != success)
         {
             cout << "Failed Inserting Keys..." << endl;
@@ -911,16 +909,7 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
     }
 
-
-	rc = indexManager->printIndex (fileHandle, attribute);
-	if (rc != success)
-	{
-		cout << "Failed printing out index tree... "<<endl;
-		goto error_close_index;
-	}
     //scan
-	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size() << endl;
-
     compVal = 20000;
     rc = indexManager->scan(fileHandle, attribute, NULL, &compVal, true, true, ix_ScanIterator);
     if(rc == success)
@@ -932,7 +921,6 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Opening Scan..." << endl;
         goto error_close_index;
     }
-	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size() << endl;
 
     // Test DeleteEntry in IndexScan Iterator
     count = 0;
@@ -950,8 +938,6 @@ int testCase_9(const string &indexFileName, const Attribute &attribute)
         }
         count++;
     }
-
-
     cout << "Number of deleted entries: " << count << endl;
     if (count != 20001)
     {
@@ -1161,7 +1147,6 @@ int testCase_10(const string &indexFileName, const Attribute &attribute)
         cout << "Failed Opening Scan..." << endl;
         goto error_close_index;
     }
-	cout << "ix_ScanIterator.scanList :" << ix_ScanIterator.scanList.size();
 
     // Test DeleteEntry in IndexScan Iterator
     count = 0;
@@ -1793,8 +1778,8 @@ void test()
 
     // Extra Credit Work
     // Duplicat Entries
-    //testCase_extra_1(indexAgeFileName, attrAge);
-    //testCase_extra_2(indexAgeFileName, attrAge);
+    testCase_extra_1(indexAgeFileName, attrAge);
+    testCase_extra_2(indexAgeFileName, attrAge);
     // TypeVarChar - mandatory for graduate students
     testCase_extra_3(indexEmpNameFileName, attrEmpName);
     return;

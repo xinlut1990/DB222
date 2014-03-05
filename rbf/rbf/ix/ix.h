@@ -5,6 +5,10 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <malloc.h>
+#include <stdlib.h>
+#include <iomanip>
+#include <cstring>
 
 #include "../rbf/rbfm.h"
 #include "ix_data_struct.h"
