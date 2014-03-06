@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../rbf/rbfm.h"
+#include "../ix/ix.h"
 
 using namespace std;
 
@@ -41,7 +42,7 @@ class RM_IndexScanIterator {
  public:
   RM_IndexScanIterator() {};  	// Constructor
   ~RM_IndexScanIterator() {}; 	// Destructor
-
+  IX_ScanIterator ix_ScanIterator;
   // "key" follows the same format as in IndexManager::insertEntry()
   RC getNextEntry(RID &rid, void *key) {return RM_EOF;};  	// Get next matching entry
   RC close() {return -1;};             			// Terminate index scan
@@ -112,6 +113,7 @@ protected:
   ~RelationManager();
 
 private:
+  string getIndexFileName(const string &tableName, const string &attributeName);
   // get file handle from table.tbl
   RC getFileHandle(const string &tableName, FileHandle &fileHandle);
 
@@ -149,8 +151,11 @@ private:
   RC deleteTableInfo(const string &tableName);
   RC deleteColumnInfo(const string &tableName);
 
+  RC getAttribute(Attribute &attr, const string &tableName, const string &attributeName);
+
   static RelationManager *_rm;
   static RecordBasedFileManager *_rbfm;
+  static IndexManager *_im;
 
   //meta-descriptors
   vector<Attribute> tableAttrs;

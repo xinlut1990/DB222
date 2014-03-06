@@ -3,11 +3,13 @@
 
 RelationManager* RelationManager::_rm = 0;
 RecordBasedFileManager* RelationManager::_rbfm = 0;
+IndexManager* RelationManager::_im = 0;
 
 RelationManager* RelationManager::instance()
 {
     if(!_rm) {
 		_rbfm = RecordBasedFileManager::instance();
+		_im = IndexManager::instance();
         _rm = new RelationManager();
 	}
 
@@ -310,15 +312,37 @@ RC RelationManager::deleteTable(const string &tableName)
 
     return RC_SUCCESS;
 }
+string RelationManager::getIndexFileName(const string &tableName, const string &attributeName)
+{
+	return tableName + attributeName + ".idx";
+}
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
-	return -1;
+	return _im->createFile(getIndexFileName(tableName, attributeName));
 }
 
 RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)
 {
-	return -1;
+	return _im->destroyFile(getIndexFileName(tableName, attributeName));
+}
+
+//get the specific attribute from attributes of a table
+RC RelationManager::getAttribute(Attribute& attr, const string &tableName, const string &attributeName)
+{
+	vector<Attribute> attrs;
+	this->getAttributes(tableName, attrs);
+
+	vector<Attribute>::iterator attr_it = attrs.begin();
+	while(attr_it != attrs.end()) {
+
+		if(attr_it->name == attributeName) {
+			attr = *attr_it;
+			return RC_SUCCESS;
+		}
+		attr_it++;
+	}
+	return RC_ATTR_NOT_EXIST;
 }
 
 RC RelationManager::indexScan(const string &tableName,
@@ -329,7 +353,21 @@ RC RelationManager::indexScan(const string &tableName,
                       bool highKeyInclusive,
                       RM_IndexScanIterator &rm_IndexScanIterator)
 {
-	return -1;
+	FileHandle fileHandle;
+	
+	string fileName = getIndexFileName(tableName, attributeName);
+	if(!SUCCEEDED(_im->openFile(fileName, fileHandle)))
+		return RC_FILE_OPEN_FAIL;
+	
+	Attribute attr;
+	if(!SUCCEEDED(getAttribute(attr, tableName, attributeName)))
+		return RC_ATTR_NOT_EXIST;
+
+	IX_ScanIterator ix_scanIterator;
+	_im->scan(fileHandle, attr, lowKey, highKey, lowKeyInclusive, highKeyInclusive, ix_scanIterator);
+	rm_IndexScanIterator.ix_ScanIterator = ix_scanIterator;
+	
+	return RC_SUCCESS;
 }
 
 void RelationManager::readAttrFromBuffer(Attribute &attr, const void *buffer)
@@ -421,6 +459,33 @@ RC RelationManager::insertTuple(const string &tableName, const void *data, RID &
 
 	if(!SUCCEEDED( _rbfm->closeFile(fileHandle) ))
 		return RC_FILE_OPEN_FAIL;
+
+
+
+	//insert RID and key into index file
+	vector<Attribute>::iterator attr_it = attrs.begin();
+	while(attr_it != attrs.end()) {
+
+		Attribute attr = *attr_it;
+		string fileName = getIndexFileName(tableName, attr.name);
+		FileHandle idxFileHandle;
+
+		//if there exists index file for current attribute
+		if(SUCCEEDED(_im->openFile(fileName, idxFileHandle))) {
+
+			void *key = malloc(50);//TODO: change later!!
+			if(!SUCCEEDED(readAttribute(tableName, rid, attr.name, key)))
+				return RC_ATTR_NOT_EXIST;
+
+			if(!SUCCEEDED(_im->insertEntry(idxFileHandle, attr, key, rid)))
+				return RC_INDEX_INSERT_FAIL;
+
+			if(!SUCCEEDED(_im->closeFile(idxFileHandle)))
+				return RC_FILE_CLOSE_FAIL;
+
+		}
+		attr_it++;
+	}
 
     return RC_SUCCESS;
 }
