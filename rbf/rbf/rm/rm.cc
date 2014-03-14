@@ -307,6 +307,8 @@ RC RelationManager::deleteTable(const string &tableName)
 	if(!SUCCEEDED( _rbfm->destroyFile(fileHandle.getFileName()) ))
 		return RC_FILE_DESTROY_FAIL;
 
+	//TODO: delete index files
+
 	deleteTableInfo(tableName);
 	deleteColumnInfo(tableName);
 
@@ -319,7 +321,39 @@ string RelationManager::getIndexFileName(const string &tableName, const string &
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
-	return _im->createFile(getIndexFileName(tableName, attributeName));
+	string indexFileName = getIndexFileName(tableName, attributeName);
+	if( !SUCCEEDED( _im->createFile( indexFileName ) ) ) 
+		return RC_FILE_CREATION_FAIL;
+
+	FileHandle fileHandle;
+	if( !SUCCEEDED( _im->openFile( indexFileName, fileHandle ) ) ) 
+		return RC_FILE_OPEN_FAIL;
+	
+	RM_ScanIterator iter;
+	vector<string> attrNames;
+
+	//only need the key attribute
+	attrNames.push_back(attributeName);
+
+    _rm->scan(tableName, "", NO_OP, NULL, attrNames, iter);
+
+	void *key = malloc(200);
+	RID rid;
+
+	Attribute attr;
+
+	if( !SUCCEEDED( _rm->getAttribute(attr, tableName, attributeName) ) ) 
+		return RC_ATTR_NOT_EXIST;
+
+	while (iter.getNextTuple(rid, key) != RM_EOF) {
+		if( !SUCCEEDED( _im->insertEntry(fileHandle, attr, key, rid) ) )
+			return RC_INDEX_INSERT_FAIL;
+	}
+
+	if( !SUCCEEDED( _im->closeFile( fileHandle ) ) ) 
+		return RC_FILE_CLOSE_FAIL;
+
+	return RC_SUCCESS;
 }
 
 RC RelationManager::destroyIndex(const string &tableName, const string &attributeName)

@@ -490,7 +490,7 @@ int testCase_4() {
 	RC rc = success;
 	// Functions Tested
 	// 1. Filter -- IndexScan as input, on TypeReal attribute
-	cout << "****In Test Case 3****" << endl;
+	cout << "****In Test Case 4****" << endl;
 
 	IndexScan *is = new IndexScan(*rm, "right", "C");
 	float compVal = 100.0;

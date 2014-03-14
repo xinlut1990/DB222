@@ -44,7 +44,7 @@ class RM_IndexScanIterator {
   ~RM_IndexScanIterator() {}; 	// Destructor
   IX_ScanIterator ix_ScanIterator;
   // "key" follows the same format as in IndexManager::insertEntry()
-  RC getNextEntry(RID &rid, void *key) {return RM_EOF;};  	// Get next matching entry
+  RC getNextEntry(RID &rid, void *key) {return ix_ScanIterator.getNextEntry(rid, key);};  	// Get next matching entry
   RC close() {return -1;};             			// Terminate index scan
 };
 
