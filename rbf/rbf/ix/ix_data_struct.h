@@ -414,8 +414,6 @@ struct index_page<string>
 		if (pageBuffer == NULL)
 			return RC_MEM_ALLOCATION_FAIL;
 
-		int delete_entry_id;
-
 		for( int delete_entry_id = 0; delete_entry_id < this->itemNum; delete_entry_id++)
 		{
 			if ( this->items[delete_entry_id].k == key )

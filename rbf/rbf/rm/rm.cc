@@ -307,8 +307,21 @@ RC RelationManager::deleteTable(const string &tableName)
 	if(!SUCCEEDED( _rbfm->destroyFile(fileHandle.getFileName()) ))
 		return RC_FILE_DESTROY_FAIL;
 
-	//TODO: delete index files
+	vector<Attribute> attrs;
+	getAttributes(tableName, attrs);
+	for(int i = 0; i < attrs.size(); i++) {
 
+		FileHandle indexFileHandle;
+		string indexFileName = getIndexFileName(tableName, attrs[i].name);
+
+		//see if there exists index file for current attribute
+		if( SUCCEEDED( _im->openFile(indexFileName, indexFileHandle) ) ) {
+			if( !SUCCEEDED( _im->closeFile(indexFileHandle) ) )
+				return RC_FILE_CLOSE_FAIL;
+			if( !SUCCEEDED( _im->destroyFile(indexFileName) ) )
+				return RC_FILE_DESTROY_FAIL;
+		}
+	}
 	deleteTableInfo(tableName);
 	deleteColumnInfo(tableName);
 
@@ -321,11 +334,15 @@ string RelationManager::getIndexFileName(const string &tableName, const string &
 
 RC RelationManager::createIndex(const string &tableName, const string &attributeName)
 {
+	FileHandle fileHandle;
+	//no need to createIndex if the table doesn't exist
+	if(getFileHandle(tableName, fileHandle) == RC_FILE_NOT_EXISTED)
+		return RC_FILE_NOT_EXISTED;
+
 	string indexFileName = getIndexFileName(tableName, attributeName);
 	if( !SUCCEEDED( _im->createFile( indexFileName ) ) ) 
 		return RC_FILE_CREATION_FAIL;
 
-	FileHandle fileHandle;
 	if( !SUCCEEDED( _im->openFile( indexFileName, fileHandle ) ) ) 
 		return RC_FILE_OPEN_FAIL;
 	
