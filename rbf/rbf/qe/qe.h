@@ -41,6 +41,12 @@ class Iterator {
         virtual RC getNextTuple(void *data) = 0;
         virtual void getAttributes(vector<Attribute> &attrs) const = 0;
         virtual ~Iterator() {};
+
+	protected:
+		//read attribute of a tuple
+		void readAttribute(Value &val, const vector<Attribute> &attrs, const string &attrName, const void *data);
+		//project the original data into indicated columns
+		void projectRecord(void *dest, const void *src, const vector<Attribute> &recordDescriptor, const vector<string> &projAttrs);
 };
 
 
@@ -218,13 +224,17 @@ class Filter : public Iterator {
 class Project : public Iterator {
     // Projection operator
     public:
+		Iterator *input;
+		vector<string> attrNames;
+
         Project(Iterator *input,                            // Iterator of input R
-                const vector<string> &attrNames){};           // vector containing attribute names
+                const vector<string> &attrNames): input(input), attrNames(attrNames){};           // vector containing attribute names
         ~Project(){};
 
-        RC getNextTuple(void *data) {return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
+
 };
 
 
@@ -264,21 +274,30 @@ class INLJoin : public Iterator {
 class Aggregate : public Iterator {
     // Aggregation operator
     public:
+		Iterator *input;
+		Attribute aggAttr;
+		Attribute gAttr;
+		AggregateOp op;
+		bool isGrouped;
+		bool done;
         Aggregate(Iterator *input,                              // Iterator of input R
                   Attribute aggAttr,                            // The attribute over which we are computing an aggregate
                   AggregateOp op                                // Aggregate operation
-        ){};
+				  ): input(input), aggAttr(aggAttr), op(op), isGrouped(false){done = false;};
 
         // Extra Credit
         Aggregate(Iterator *input,                              // Iterator of input R
                   Attribute aggAttr,                            // The attribute over which we are computing an aggregate
                   Attribute gAttr,                              // The attribute over which we are grouping the tuples
                   AggregateOp op                                // Aggregate operation
-        ){};
+        ): input(input), aggAttr(aggAttr), gAttr(gAttr), op(op), isGrouped(true){done = false;};
 
         ~Aggregate(){};
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
+
+		template <class T>
+		RC getNextTupleByType(void *data);
         // Please name the output attribute as aggregateOp(aggAttr)
         // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
         // output attrname = "MAX(rel.attr)"
