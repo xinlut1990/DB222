@@ -34,6 +34,7 @@ public:
 	  return rbfm_ScanIterator.getNextRecord(rid, data);
 
   };
+  RC reset() { rbfm_ScanIterator.index = 0; return 0;};
   RC close() { return -1; };
 
 };

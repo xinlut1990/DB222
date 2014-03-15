@@ -318,3 +318,148 @@ RC Aggregate::getNextTupleByType(void *data)
 		return RC_UNDER_CONSTRUCTION;
 	}
 };
+/*
+	    Iterator* iter;
+        TableScan* scan;
+        Condition cond;
+        unsigned numOfPages;
+        vector<Attribute> leftAttrs;
+        vector<Attribute> rightAttrs;
+        vector<Attribute> attrs;
+        Attribute leftAttribute;
+        list<char*> results;
+        list<int> resultLengths;
+		*/
+/*
+struct Attribute {
+    string   name;     // attribute name
+    AttrType type;     // attribute type
+    AttrLength length; // attribute length
+	Attribute() {};
+	bool operator == (const struct Attribute&a)
+	{
+		return (name==a.name && type ==a.type && length == a.length);
+	}
+};
+*/
+template <typename T>
+vector<void*> compareAttributes(vector<Attribute> leftAttrs,  vector<Attribute> rightAttrs, int leftPos, int rightPos, Iterator* iter,\
+				  TableScan* scan, void *bufferData)
+{
+	// Buffer size and character buffer size
+    const unsigned bufSize = 200;
+	void *leftData = malloc(bufSize);
+	void *rightData = malloc(bufSize);
+	T compareValueR, compareValueL;
+	vector<void*> joinData;
+	int offsetL = 0, offsetR = 0, count = 0;
+
+	// TypeInt = 0, TypeReal, TypeVarChar
+	while ( iter->getNextTuple(leftData) != QE_EOF)
+	{
+		/*****************************************************
+		 * get left join value
+		 ****************************************************/
+		if (count == 0)
+		{
+			for (int i = 0; i < leftPos; i++)
+			{
+				if (leftAttrs[i].type == TypeInt)
+					offsetL += sizeof(int); //readIntFromBuffer(rightData, offset)
+				else if (leftAttrs[i].type == TypeReal)
+					offsetL += sizeof(float); //readFloatFromBuffer(rightData, offset)
+				else
+					char *str = buildStrFromBuffer(leftData, offsetL);
+			}
+		}
+		int lengthL = offsetL;
+		if ( leftAttrs[leftPos].type == TypeInt )
+			compareValueL = readIntFromBuffer(leftData, lengthL);
+		else if (leftAttrs[leftPos].type == TypeReal)
+			compareValueL = readFloatFromBuffer(leftData, lengthL);
+		//else
+		//	compareValueL = string( buildStrFromBuffer(leftData, lengthL) );		
+
+		int offset = 0;
+		scan->resetIterator();
+		while( scan->getNextTuple(rightData) != QE_EOF)
+		{
+		    /*****************************************************
+		     * get right join value
+		     ****************************************************/
+			if (count == 0)
+			{
+				for (int i = 0; i < rightPos; i++)
+				{
+					if (rightAttrs[i].type == TypeInt)
+						offsetR += sizeof(int); //readIntFromBuffer(rightData, offset)
+					else if (rightAttrs[i].type == TypeReal)
+						offsetR += sizeof(float); //readFloatFromBuffer(rightData, offset)
+					else
+						char *str = buildStrFromBuffer(rightData, offsetR);
+				}
+				count ++;
+			}
+			int lengthR = offsetR;
+
+			if ( rightAttrs[rightPos].type == TypeInt )
+				compareValueR = readIntFromBuffer(rightData, lengthR);
+			else if (rightAttrs[rightPos].type == TypeReal)
+				compareValueR = readFloatFromBuffer(rightData, lengthR);
+			//else
+			//	compareValueR = string( buildStrFromBuffer(rightData, lengthR) );
+			// Ends of fetch
+
+			if (compareValueL == compareValueR)
+			{
+				memset(bufferData, 0, bufSize);
+				memcpy(bufferData, (char*)leftData, lengthL);
+				memcpy(bufferData, (char*)rightData, lengthR);
+				joinData.push_back(bufferData);
+			}
+		}
+
+	}
+	return joinData;
+
+	delete leftData;
+	delete rightData;
+}
+
+
+NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition, const unsigned numPages)
+{
+	this->iter = leftIn;
+	this->scan = rightIn;
+	this->cond = condition;
+	this->numOfPages = numPages;
+	const unsigned bufSize = 200;
+	void *bufferData = malloc(bufSize);
+
+	leftIn->getAttributes(leftAttrs);
+	rightIn->getAttributes(rightAttrs);
+
+	int leftPos, rightPos;
+	for (int i = 0; i <leftAttrs.size(); i++)
+		if ( strcmp (leftAttrs[i].name.c_str(), this->cond.lhsAttr.c_str()) == 0 )
+			leftPos = i;
+	for (int i = 0; i <rightAttrs.size(); i++)
+		if ( strcmp (rightAttrs[i].name.c_str(), this->cond.rhsAttr.c_str()) == 0 )
+			rightPos = i;
+
+	if (rightAttrs[rightPos].type == TypeInt)
+		this->joinData = compareAttributes<int> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
+	else if (rightAttrs[rightPos].type == TypeReal)
+		this->joinData = compareAttributes<float> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
+	else 
+		this->joinData = compareAttributes<string> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
+
+	free(bufferData);
+}
+
+
+void NLJoin::getAttributes(vector<Attribute> &attrs) const
+{
+	attrs.clear();
+	attrs = this->attrs;
+}

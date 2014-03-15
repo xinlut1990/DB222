@@ -94,6 +94,10 @@ class TableScan : public Iterator
             rm.scan(tableName, "", NO_OP, NULL, attrNames, *iter);
         };
 
+		void resetIterator()
+		{
+			int rc = iter->reset();
+		}
         RC getNextTuple(void *data)
         {
             return iter->getNextTuple(rid, data);
@@ -245,12 +249,23 @@ class NLJoin : public Iterator {
                TableScan *rightIn,                           // TableScan Iterator of input S
                const Condition &condition,                   // Join condition
                const unsigned numPages                       // Number of pages can be used to do join (decided by the optimizer)
-        ){};
+        );
         ~NLJoin(){};
 
         RC getNextTuple(void *data){return QE_EOF;};
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
+		//void compareAttributes(vector<Attribute> leftAttrs,  vector<Attribute> rightAttrs, int leftPos, int rightPos);
+private:
+	    Iterator* iter;
+        TableScan* scan;
+        Condition cond;
+        unsigned numOfPages;
+        vector<Attribute> leftAttrs;
+        vector<Attribute> rightAttrs;
+		vector<Attribute> attrs;
+		Attribute joinAttrs;
+		vector<void *> joinData;
 };
 
 
