@@ -295,7 +295,7 @@ int populateLeftVarCharTable() {
 		int a = i + 20;
 
 		int length = (i % 26) + 1;
-		string b;
+		string b = string(length, '\0');
 		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
@@ -324,7 +324,7 @@ int populateRightVarCharTable() {
 
 		// Prepare the tuple data for insertion
 		int length = (i % 26) + 1;
-		string b;
+		string b = string(length, '\0');
 		for (int j = 0; j < length; j++) {
 			b[j] = 96 + length;
 		}
@@ -490,7 +490,7 @@ int testCase_4() {
 	RC rc = success;
 	// Functions Tested
 	// 1. Filter -- IndexScan as input, on TypeReal attribute
-	cout << "****In Test Case 4****" << endl;
+	cout << "****In Test Case 3****" << endl;
 
 	IndexScan *is = new IndexScan(*rm, "right", "C");
 	float compVal = 100.0;
@@ -1305,7 +1305,7 @@ int extraTestCase_2()
         memset(data, 0, sizeof(float));
     }
 
-    if (average != 59.5) {
+    if (average != 69.5) {
     	rc = fail;
     }
 
