@@ -1573,7 +1573,6 @@ int main() {
 		g_nUndergradExtraPoint += 5;
     }
 
-
 	print_point: cout << "grad-point: " << g_nGradPoint
 			<< "\t grad-extra-point: " << g_nGradExtraPoint << endl;
 	cout << "undergrad-point: " << g_nUndergradPoint

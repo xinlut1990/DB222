@@ -125,8 +125,8 @@ class IX_ScanIterator {
   RC close();             						// Terminate index scan
 
   vector<RID> scanList;
-private:
-  int index;
+//private: //0315
+  int index; //0315
 
 };
 

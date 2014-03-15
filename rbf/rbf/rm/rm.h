@@ -46,6 +46,7 @@ class RM_IndexScanIterator {
   IX_ScanIterator ix_ScanIterator;
   // "key" follows the same format as in IndexManager::insertEntry()
   RC getNextEntry(RID &rid, void *key) {return ix_ScanIterator.getNextEntry(rid, key);};  	// Get next matching entry
+  RC reset() { ix_ScanIterator.index = 0; return 0;};
   RC close() {return -1;};             			// Terminate index scan
 };
 

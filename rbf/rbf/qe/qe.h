@@ -169,6 +169,11 @@ class IndexScan : public Iterator
                            highKeyInclusive, *iter);
         };
 
+		void resetIterator()
+		{
+			int rc = iter->reset();
+		}
+
         RC getNextTuple(void *data)
         {
             int rc = iter->getNextEntry(rid, key);
@@ -242,6 +247,7 @@ class Project : public Iterator {
 };
 
 
+
 class NLJoin : public Iterator {
     // Nested-Loop join operator
     public:
@@ -252,10 +258,12 @@ class NLJoin : public Iterator {
         );
         ~NLJoin(){};
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
         void getAttributes(vector<Attribute> &attrs) const;
+		bool isConditionTrue(const Value &lhsVal, const Value &rhsVal, CompOp op);
 		//void compareAttributes(vector<Attribute> leftAttrs,  vector<Attribute> rightAttrs, int leftPos, int rightPos);
+		
 private:
 	    Iterator* iter;
         TableScan* scan;
@@ -264,9 +272,11 @@ private:
         vector<Attribute> leftAttrs;
         vector<Attribute> rightAttrs;
 		vector<Attribute> attrs;
-		Attribute joinAttrs;
-		vector<void *> joinData;
+
+		template <class T>
+        bool isConditionTrueByType(const T &lhsVal, const T &rhsVal, CompOp op);
 };
+
 
 
 class INLJoin : public Iterator {
@@ -276,13 +286,25 @@ class INLJoin : public Iterator {
                 IndexScan *rightIn,                             // IndexScan Iterator of input S
                 const Condition &condition,                     // Join condition
                 const unsigned numPages                         // Number of pages can be used to do join (decided by the optimizer)
-        ){};
+        );
 
-        ~INLJoin(){};
+		~INLJoin(){};
 
-        RC getNextTuple(void *data){return QE_EOF;};
+        RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
-        void getAttributes(vector<Attribute> &attrs) const{};
+        void getAttributes(vector<Attribute> &attrs) const;
+		bool isConditionTrue(const Value &lhsVal, const Value &rhsVal, CompOp op);
+private:
+	    Iterator* iter;
+        IndexScan* indexScan;
+        Condition cond;
+        unsigned numOfPages;
+        vector<Attribute> leftAttrs;
+        vector<Attribute> rightAttrs;
+		vector<Attribute> attrs;
+
+		template <class T>
+        bool isConditionTrueByType(const T &lhsVal, const T &rhsVal, CompOp op);
 };
 
 

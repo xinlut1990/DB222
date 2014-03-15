@@ -318,114 +318,6 @@ RC Aggregate::getNextTupleByType(void *data)
 		return RC_UNDER_CONSTRUCTION;
 	}
 };
-/*
-	    Iterator* iter;
-        TableScan* scan;
-        Condition cond;
-        unsigned numOfPages;
-        vector<Attribute> leftAttrs;
-        vector<Attribute> rightAttrs;
-        vector<Attribute> attrs;
-        Attribute leftAttribute;
-        list<char*> results;
-        list<int> resultLengths;
-		*/
-/*
-struct Attribute {
-    string   name;     // attribute name
-    AttrType type;     // attribute type
-    AttrLength length; // attribute length
-	Attribute() {};
-	bool operator == (const struct Attribute&a)
-	{
-		return (name==a.name && type ==a.type && length == a.length);
-	}
-};
-*/
-template <typename T>
-vector<void*> compareAttributes(vector<Attribute> leftAttrs,  vector<Attribute> rightAttrs, int leftPos, int rightPos, Iterator* iter,\
-				  TableScan* scan, void *bufferData)
-{
-	// Buffer size and character buffer size
-    const unsigned bufSize = 200;
-	void *leftData = malloc(bufSize);
-	void *rightData = malloc(bufSize);
-	T compareValueR, compareValueL;
-	vector<void*> joinData;
-	int offsetL = 0, offsetR = 0, count = 0;
-
-	// TypeInt = 0, TypeReal, TypeVarChar
-	while ( iter->getNextTuple(leftData) != QE_EOF)
-	{
-		/*****************************************************
-		 * get left join value
-		 ****************************************************/
-		if (count == 0)
-		{
-			for (int i = 0; i < leftPos; i++)
-			{
-				if (leftAttrs[i].type == TypeInt)
-					offsetL += sizeof(int); //readIntFromBuffer(rightData, offset)
-				else if (leftAttrs[i].type == TypeReal)
-					offsetL += sizeof(float); //readFloatFromBuffer(rightData, offset)
-				else
-					char *str = buildStrFromBuffer(leftData, offsetL);
-			}
-		}
-		int lengthL = offsetL;
-		if ( leftAttrs[leftPos].type == TypeInt )
-			compareValueL = readIntFromBuffer(leftData, lengthL);
-		else if (leftAttrs[leftPos].type == TypeReal)
-			compareValueL = readFloatFromBuffer(leftData, lengthL);
-		//else
-		//	compareValueL = string( buildStrFromBuffer(leftData, lengthL) );		
-
-		int offset = 0;
-		scan->resetIterator();
-		while( scan->getNextTuple(rightData) != QE_EOF)
-		{
-		    /*****************************************************
-		     * get right join value
-		     ****************************************************/
-			if (count == 0)
-			{
-				for (int i = 0; i < rightPos; i++)
-				{
-					if (rightAttrs[i].type == TypeInt)
-						offsetR += sizeof(int); //readIntFromBuffer(rightData, offset)
-					else if (rightAttrs[i].type == TypeReal)
-						offsetR += sizeof(float); //readFloatFromBuffer(rightData, offset)
-					else
-						char *str = buildStrFromBuffer(rightData, offsetR);
-				}
-				count ++;
-			}
-			int lengthR = offsetR;
-
-			if ( rightAttrs[rightPos].type == TypeInt )
-				compareValueR = readIntFromBuffer(rightData, lengthR);
-			else if (rightAttrs[rightPos].type == TypeReal)
-				compareValueR = readFloatFromBuffer(rightData, lengthR);
-			//else
-			//	compareValueR = string( buildStrFromBuffer(rightData, lengthR) );
-			// Ends of fetch
-
-			if (compareValueL == compareValueR)
-			{
-				memset(bufferData, 0, bufSize);
-				memcpy(bufferData, (char*)leftData, lengthL);
-				memcpy(bufferData, (char*)rightData, lengthR);
-				joinData.push_back(bufferData);
-			}
-		}
-
-	}
-	return joinData;
-
-	delete leftData;
-	delete rightData;
-}
-
 
 NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition, const unsigned numPages)
 {
@@ -433,28 +325,10 @@ NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition,
 	this->scan = rightIn;
 	this->cond = condition;
 	this->numOfPages = numPages;
-	const unsigned bufSize = 200;
-	void *bufferData = malloc(bufSize);
 
 	leftIn->getAttributes(leftAttrs);
 	rightIn->getAttributes(rightAttrs);
 
-	int leftPos, rightPos;
-	for (int i = 0; i <leftAttrs.size(); i++)
-		if ( strcmp (leftAttrs[i].name.c_str(), this->cond.lhsAttr.c_str()) == 0 )
-			leftPos = i;
-	for (int i = 0; i <rightAttrs.size(); i++)
-		if ( strcmp (rightAttrs[i].name.c_str(), this->cond.rhsAttr.c_str()) == 0 )
-			rightPos = i;
-
-	if (rightAttrs[rightPos].type == TypeInt)
-		this->joinData = compareAttributes<int> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
-	else if (rightAttrs[rightPos].type == TypeReal)
-		this->joinData = compareAttributes<float> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
-	else 
-		this->joinData = compareAttributes<string> (leftAttrs, rightAttrs, leftPos, rightPos, iter, scan, bufferData);
-
-	free(bufferData);
 }
 
 
@@ -462,4 +336,289 @@ void NLJoin::getAttributes(vector<Attribute> &attrs) const
 {
 	attrs.clear();
 	attrs = this->attrs;
+}
+bool NLJoin::isConditionTrue(const Value &lhsVal, const Value &rhsVal, CompOp op)
+{
+	int offset = 0;
+
+	if(lhsVal.type == TypeInt) {
+		offset = 0;
+		int lhs = reader<int>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		int rhs = reader<int>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<int>(lhs, rhs, op);
+
+	} else if(lhsVal.type == TypeReal) {
+		offset = 0;
+		float lhs = reader<float>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		float rhs = reader<float>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<float>(lhs, rhs, op);
+
+	} else if(lhsVal.type == TypeVarChar) {
+		offset = 0;
+		string lhs = reader<string>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		string rhs = reader<string>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<string>(lhs, rhs, op);
+
+	} else {
+		return false;
+	}
+}
+template <class T>
+bool NLJoin::isConditionTrueByType(const T &lhsVal, const T &rhsVal, CompOp op)
+{
+	if(op == EQ_OP) {
+		return lhsVal == rhsVal;
+	} else if(op == LT_OP) {
+		return lhsVal < rhsVal;
+	} else if(op == GT_OP) {
+		return lhsVal > rhsVal;
+	} else if(op == LE_OP) {
+		return lhsVal <= rhsVal;
+	} else if(op == GE_OP) {
+		return lhsVal >= rhsVal;
+	} else if(op == NE_OP) {
+		return lhsVal != rhsVal;
+	} else if(op == NO_OP) {
+		return lhsVal == rhsVal;
+	} else {
+		return false;
+	}
+
+}
+int getAttributeLength(const vector<Attribute> &attrs, const void *data)
+{
+	int buffer_index = 0;
+	int dest_index = 0;
+	int offset = 0;
+	vector<Attribute>::const_iterator attribute_it = attrs.begin();
+
+	while ( attribute_it != attrs.end())
+	{
+		if( (*attribute_it).type == TypeVarChar )
+		{
+			//string length
+			int *pStrLen = (int*)malloc(sizeof(int));
+
+		    memcpy(pStrLen, (char*)data + offset, sizeof(int));
+		    offset += sizeof(int);
+
+		    //string
+		    char *str = (char*)malloc(*pStrLen + 1);
+			memcpy(str, (char*)data + offset, *pStrLen);
+		    offset += *pStrLen;
+
+			free(pStrLen);
+		}
+		else if( (*attribute_it).type == TypeReal )
+		{
+			offset += sizeof(int);
+		}
+		else // INT
+		{
+			offset += sizeof(float);
+		}
+		++attribute_it;
+	}
+	return offset;
+}
+RC NLJoin::getNextTuple(void *data)
+{
+	// Buffer size and character buffer size
+    const unsigned bufSize = 200;
+
+	// Buffer data that holds the left/right tuple
+	void *leftData = malloc(bufSize);
+	void *rightData = malloc(bufSize);
+
+	int offsetL = 0, offsetR = 0, desIndex = 0;
+	static int count = 0;
+
+
+	// TypeInt = 0, TypeReal, TypeVarChar
+	while ( iter->getNextTuple(leftData) != QE_EOF)
+	{
+	    // value of left/right value
+	    Value lhsVal;
+	    lhsVal.data = malloc(200);
+	    readAttribute(lhsVal, leftAttrs, this->cond.lhsAttr, leftData);
+	    Value rhsVal = this->cond.rhsValue;
+		int lengthLeft = getAttributeLength(leftAttrs, leftData);
+
+		scan->resetIterator();
+		while( scan->getNextTuple(rightData) != QE_EOF)
+		{
+			rhsVal.data = malloc(200);
+		    readAttribute(rhsVal, rightAttrs, this->cond.rhsAttr, rightData);
+			int lengthRight = getAttributeLength(rightAttrs, rightData);
+
+			//check type matching
+			if(lhsVal.type != rhsVal.type)
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+
+				delete leftData;
+	            delete rightData;
+				return RC_TYPE_MISMATCH;
+			}
+
+		    if( isConditionTrue(lhsVal, rhsVal, this->cond.op) ) 
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+				memcpy(data, leftData, lengthLeft);
+				memcpy( (char*)data + lengthLeft, rightData, lengthRight);
+                
+				delete leftData;
+	            delete rightData;
+			    
+				return RC_SUCCESS;
+			} 
+			free(rhsVal.data);
+		}
+		free(lhsVal.data);
+	}
+
+	delete leftData;
+	delete rightData;
+	return QE_EOF;
+}
+INLJoin::INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &condition,const unsigned numPages)
+{
+	this->iter = leftIn;
+	this->indexScan = rightIn;
+	this->cond = condition;
+	this->numOfPages = numPages;
+
+	leftIn->getAttributes(leftAttrs);
+	rightIn->getAttributes(rightAttrs);
+
+}
+void INLJoin::getAttributes(vector<Attribute> &attrs) const
+{
+	attrs.clear();
+	attrs = this->attrs;
+}
+bool INLJoin::isConditionTrue(const Value &lhsVal, const Value &rhsVal, CompOp op)
+{
+	int offset = 0;
+
+	if(lhsVal.type == TypeInt) {
+		offset = 0;
+		int lhs = reader<int>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		int rhs = reader<int>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<int>(lhs, rhs, op);
+
+	} else if(lhsVal.type == TypeReal) {
+		offset = 0;
+		float lhs = reader<float>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		float rhs = reader<float>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<float>(lhs, rhs, op);
+
+	} else if(lhsVal.type == TypeVarChar) {
+		offset = 0;
+		string lhs = reader<string>::readFromBuffer(lhsVal.data, offset);
+		offset = 0;
+		string rhs = reader<string>::readFromBuffer(rhsVal.data, offset);
+
+		return isConditionTrueByType<string>(lhs, rhs, op);
+
+	} else {
+		return false;
+	}
+}
+template <class T>
+bool INLJoin::isConditionTrueByType(const T &lhsVal, const T &rhsVal, CompOp op)
+{
+	if(op == EQ_OP) {
+		return lhsVal == rhsVal;
+	} else if(op == LT_OP) {
+		return lhsVal < rhsVal;
+	} else if(op == GT_OP) {
+		return lhsVal > rhsVal;
+	} else if(op == LE_OP) {
+		return lhsVal <= rhsVal;
+	} else if(op == GE_OP) {
+		return lhsVal >= rhsVal;
+	} else if(op == NE_OP) {
+		return lhsVal != rhsVal;
+	} else if(op == NO_OP) {
+		return lhsVal == rhsVal;
+	} else {
+		return false;
+	}
+
+}
+RC INLJoin::getNextTuple(void *data)
+{
+	// Buffer size and character buffer size
+    const unsigned bufSize = 200;
+
+	// Buffer data that holds the left/right tuple
+	void *leftData = malloc(bufSize);
+	void *rightData = malloc(bufSize);
+
+	int offsetL = 0, offsetR = 0, desIndex = 0;
+	static int count = 0;
+
+
+	// TypeInt = 0, TypeReal, TypeVarChar
+	while ( iter->getNextTuple(leftData) != QE_EOF)
+	{
+	    // value of left/right value
+	    Value lhsVal;
+	    lhsVal.data = malloc(200);
+	    readAttribute(lhsVal, leftAttrs, this->cond.lhsAttr, leftData);
+	    Value rhsVal = this->cond.rhsValue;
+		int lengthLeft = getAttributeLength(leftAttrs, leftData);
+
+		indexScan->resetIterator();
+		while( this->indexScan->getNextTuple(rightData) != QE_EOF)
+		{
+			rhsVal.data = malloc(200);
+		    readAttribute(rhsVal, rightAttrs, this->cond.rhsAttr, rightData);
+			int lengthRight = getAttributeLength(rightAttrs, rightData);
+
+			//check type matching
+			if(lhsVal.type != rhsVal.type)
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+
+				delete leftData;
+	            delete rightData;
+				return RC_TYPE_MISMATCH;
+			}
+
+		    if( isConditionTrue(lhsVal, rhsVal, this->cond.op) ) 
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+				memcpy(data, leftData, lengthLeft);
+				memcpy( (char*)data + lengthLeft, rightData, lengthRight);
+                
+				delete leftData;
+	            delete rightData;
+			    
+				return RC_SUCCESS;
+			}
+            
+		    free(rhsVal.data);
+		}
+		free(lhsVal.data);
+	}
+
+	delete leftData;
+	delete rightData;
+	return QE_EOF;
 }
