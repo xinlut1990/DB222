@@ -1494,17 +1494,19 @@ int main() {
 		g_nGradPoint += 5;
 		g_nUndergradExtraPoint += 3;
 	}
-
+	
 	if (testCase_8() == success) {
 		g_nGradPoint += 3;
 		g_nUndergradPoint += 3;
 	}
-
+	else
+		cout << testCase_8() << endl;
+	
 	if (testCase_9_Grad() == success) {
 		g_nGradPoint += 3;
 		g_nUndergradExtraPoint += 2;
 	}
-
+	
 	if (testCase_9_Undergrad() == success) {
 		g_nGradPoint += 2;
 		g_nUndergradPoint += 5;
@@ -1561,7 +1563,7 @@ int main() {
 	if (populateGroupTable() != success) {
 		goto print_point;
 	}
-
+	/*
 	// Aggregate with GroupBy
     if (extraTestCase_3() == success) {
 		g_nGradExtraPoint += 5;
@@ -1571,7 +1573,7 @@ int main() {
     if (extraTestCase_4() == success) {
 		g_nGradExtraPoint += 5;
 		g_nUndergradExtraPoint += 5;
-    }
+    }*/
 
 	print_point: cout << "grad-point: " << g_nGradPoint
 			<< "\t grad-extra-point: " << g_nGradExtraPoint << endl;

@@ -329,6 +329,18 @@ NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition,
 	leftIn->getAttributes(leftAttrs);
 	rightIn->getAttributes(rightAttrs);
 
+	vector<Attribute>::iterator attrs_it = leftAttrs.begin();
+	while (attrs_it != leftAttrs.end())
+	{
+		this->attrs.push_back(*attrs_it);
+		attrs_it++;
+	}
+	attrs_it = rightAttrs.begin();
+	while (attrs_it != rightAttrs.end())
+	{
+		this->attrs.push_back(*attrs_it);
+		attrs_it++;
+	}
 }
 
 
@@ -499,6 +511,18 @@ INLJoin::INLJoin(Iterator *leftIn, IndexScan *rightIn, const Condition &conditio
 	leftIn->getAttributes(leftAttrs);
 	rightIn->getAttributes(rightAttrs);
 
+	vector<Attribute>::iterator attrs_it = leftAttrs.begin();
+	while (attrs_it != leftAttrs.end())
+	{
+		this->attrs.push_back(*attrs_it);
+		attrs_it++;
+	}
+	attrs_it = rightAttrs.begin();
+	while (attrs_it != rightAttrs.end())
+	{
+		this->attrs.push_back(*attrs_it);
+		attrs_it++;
+	}
 }
 void INLJoin::getAttributes(vector<Attribute> &attrs) const
 {
