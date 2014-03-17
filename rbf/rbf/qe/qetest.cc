@@ -1193,7 +1193,7 @@ int testCase_12() {
 	while (nlJoin->getNextTuple(data) != QE_EOF) {
 		int offset = 0;
 
-		// Print leftvarchar.A
+		/*// Print leftvarchar.A
 		cout << "leftvarchar.A " << *(int *) ((char *) data + offset) << endl;
 		offset += sizeof(int);
 
@@ -1222,7 +1222,7 @@ int testCase_12() {
 		// Print rightvarchar.B
 		cout << "rightvarchar.C " << *(float *) ((char *) data + offset)
 				<< endl;
-		offset += sizeof(float);
+		offset += sizeof(float);*/
 
 		memset(data, 0, bufSize);
 		++actualResultCnt;

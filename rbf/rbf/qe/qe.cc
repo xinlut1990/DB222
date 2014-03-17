@@ -451,6 +451,9 @@ NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition,
 	this->cond = condition;
 	this->numOfPages = numPages;
 
+	this->rightEnds = true;
+	this->lastLeftData = malloc(200);
+
 	leftIn->getAttributes(leftAttrs);
 	rightIn->getAttributes(rightAttrs);
 
@@ -576,10 +579,12 @@ RC NLJoin::getNextTuple(void *data)
 	int offsetL = 0, offsetR = 0, desIndex = 0;
 	static int count = 0;
 
+	if(rightEnds) {
 
 	// TypeInt = 0, TypeReal, TypeVarChar
 	while ( iter->getNextTuple(leftData) != QE_EOF)
 	{
+		memcpy(lastLeftData, leftData, 200);
 	    // value of left/right value
 	    Value lhsVal;
 	    lhsVal.data = malloc(200);
@@ -587,9 +592,10 @@ RC NLJoin::getNextTuple(void *data)
 	    Value rhsVal = this->cond.rhsValue;
 		int lengthLeft = getAttributeLength(leftAttrs, leftData);
 
-		scan->resetIterator();
+		
 		while( scan->getNextTuple(rightData) != QE_EOF)
 		{
+			rightEnds = false;
 			rhsVal.data = malloc(200);
 		    readAttribute(rhsVal, rightAttrs, this->cond.rhsAttr, rightData);
 			int lengthRight = getAttributeLength(rightAttrs, rightData);
@@ -619,7 +625,68 @@ RC NLJoin::getNextTuple(void *data)
 			} 
 			free(rhsVal.data);
 		}
+		rightEnds = true;
+		scan->resetIterator();
+
 		free(lhsVal.data);
+	}
+
+	} else {
+
+	do
+	{
+		if(!rightEnds)
+			memcpy(leftData, lastLeftData, 200);
+		else 
+			memcpy(lastLeftData, leftData, 200);
+	    // value of left/right value
+	    Value lhsVal;
+	    lhsVal.data = malloc(200);
+	    readAttribute(lhsVal, leftAttrs, this->cond.lhsAttr, leftData);
+		int z = 4;
+		int testNum = reader<int>::readFromBuffer(leftData, z);
+	    Value rhsVal = this->cond.rhsValue;
+		int lengthLeft = getAttributeLength(leftAttrs, leftData);
+
+		
+		while( scan->getNextTuple(rightData) != QE_EOF)
+		{
+			rightEnds = false;
+			rhsVal.data = malloc(200);
+		    readAttribute(rhsVal, rightAttrs, this->cond.rhsAttr, rightData);
+			int lengthRight = getAttributeLength(rightAttrs, rightData);
+
+			//check type matching
+			if(lhsVal.type != rhsVal.type)
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+
+				delete leftData;
+	            delete rightData;
+				return RC_TYPE_MISMATCH;
+			}
+
+		    if( isConditionTrue(lhsVal, rhsVal, this->cond.op) ) 
+			{
+				free(lhsVal.data);
+				free(rhsVal.data);
+				memcpy(data, leftData, lengthLeft);
+				memcpy( (char*)data + lengthLeft, rightData, lengthRight);
+                
+				delete leftData;
+	            delete rightData;
+			    
+				return RC_SUCCESS;
+			} 
+			free(rhsVal.data);
+		}
+		rightEnds = true;
+		scan->resetIterator();
+
+		free(lhsVal.data);
+	} while ( iter->getNextTuple(leftData) != QE_EOF);
+
 	}
 
 	delete leftData;

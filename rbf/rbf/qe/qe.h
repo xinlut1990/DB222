@@ -257,7 +257,7 @@ class NLJoin : public Iterator {
                const Condition &condition,                   // Join condition
                const unsigned numPages                       // Number of pages can be used to do join (decided by the optimizer)
         );
-        ~NLJoin(){};
+        ~NLJoin(){ delete(this->lastLeftData); };
 
         RC getNextTuple(void *data);
         // For attribute in vector<Attribute>, name it as rel.attr
@@ -273,6 +273,8 @@ private:
         vector<Attribute> leftAttrs;
         vector<Attribute> rightAttrs;
 		vector<Attribute> attrs;
+		bool rightEnds;
+		void* lastLeftData;
 
 		template <class T>
         bool isConditionTrueByType(const T &lhsVal, const T &rhsVal, CompOp op);
