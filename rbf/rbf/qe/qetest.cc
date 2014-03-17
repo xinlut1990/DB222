@@ -1563,7 +1563,7 @@ int main() {
 	if (populateGroupTable() != success) {
 		goto print_point;
 	}
-	/*
+
 	// Aggregate with GroupBy
     if (extraTestCase_3() == success) {
 		g_nGradExtraPoint += 5;
@@ -1573,7 +1573,8 @@ int main() {
     if (extraTestCase_4() == success) {
 		g_nGradExtraPoint += 5;
 		g_nUndergradExtraPoint += 5;
-    }*/
+    }
+
 
 	print_point: cout << "grad-point: " << g_nGradPoint
 			<< "\t grad-extra-point: " << g_nGradExtraPoint << endl;

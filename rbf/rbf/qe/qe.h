@@ -2,6 +2,7 @@
 #define _qe_h_
 
 #include <vector>
+#include <map>
 
 #include "../rbf/rbfm.h"
 #include "../rm/rm.h"
@@ -333,8 +334,9 @@ class Aggregate : public Iterator {
 
         RC getNextTuple(void *data);
 
-		template <class T>
+		template <class T, class T2>
 		RC getNextTupleByType(void *data);
+
         // Please name the output attribute as aggregateOp(aggAttr)
         // E.g. Relation=rel, attribute=attr, aggregateOp=MAX
         // output attrname = "MAX(rel.attr)"

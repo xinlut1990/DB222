@@ -1,6 +1,7 @@
 #include <limits.h>
 #include "../rbf/mem_util.h"
 #include "qe.h"
+#include <map>
 
 Filter::Filter(Iterator* input, const Condition &condition): input(input), condition(condition) {
 
@@ -247,22 +248,56 @@ void Project::getAttributes(vector<Attribute> &attrs) const
 
 RC Aggregate::getNextTuple(void *data)
 {
-	if(this->aggAttr.type == TypeInt) {
-		return getNextTupleByType<int>(data);
-	} else if(this->aggAttr.type == TypeReal) {
-		return getNextTupleByType<float>(data);
-	} else {
-		//case of string
-		return RC_UNDER_CONSTRUCTION;
+	if ( !this->isGrouped )
+	{
+		if(this->aggAttr.type == TypeInt)
+		{	return getNextTupleByType<int, int>(data);}
+		else if (this->aggAttr.type == TypeReal)
+		{	return getNextTupleByType<float, int>(data);}
+		else
+		{	return QE_EOF;}
 	}
-	
+	else
+	{
+		if(this->aggAttr.type == TypeInt && this->gAttr.type == TypeInt) 
+		{
+			return getNextTupleByType<int, int>(data);
+		} 
+	    else if(this->aggAttr.type == TypeInt && this->gAttr.type == TypeReal) 
+	    {
+		    return getNextTupleByType<int, float>(data);
+		} 
+		else if(this->aggAttr.type == TypeInt && this->gAttr.type == TypeVarChar) 
+		{
+			return getNextTupleByType<int, string>(data);
+		} 
+		else if(this->aggAttr.type == TypeReal && this->gAttr.type == TypeInt) 
+		{
+			return getNextTupleByType<float, int>(data);
+		} 
+		else if(this->aggAttr.type == TypeReal && this->gAttr.type == TypeReal) 
+		{
+			return getNextTupleByType<float, float>(data);
+		} 
+		else if(this->aggAttr.type == TypeReal && this->gAttr.type == TypeVarChar) 
+		{
+			return getNextTupleByType<float, string>(data);
+		} 
+		else
+		{
+			return QE_EOF;
+		}
+	}
 	return QE_EOF;
 };
 
-template <class T>
+template <class T, class T2>
 RC Aggregate::getNextTupleByType(void *data)
 {
 	if(done) return QE_EOF;
+
+	static map<T2, vector<T>> gAttr_hash;
+	static bool ini = true;
 
 	if(!isGrouped) {
 		void *inputData = malloc(200);
@@ -314,10 +349,100 @@ RC Aggregate::getNextTupleByType(void *data)
 
 		return RC_SUCCESS;
 	} else {
-		//TODO:
-		return RC_UNDER_CONSTRUCTION;
+		if (ini)
+		{
+			void *inputData = malloc(200);
+	        T max = numeric_limits<T>::min();
+	        T min = numeric_limits<T>::max();
+	        T sum = 0;
+	        int count = 1;
+
+			while(this->input->getNextTuple(inputData) != QE_EOF){
+		
+				Value gval;
+	            gval.data = malloc(200);
+                Value val;
+		        val.data = malloc(200);
+
+		        vector<Attribute> attrs;
+		        this->input->getAttributes(attrs);
+		        //read attribute from record
+		        readAttribute(val, attrs, this->aggAttr.name, inputData);
+			
+	            //convert buffer to specific data
+		        int offset = 0;
+		        T num = reader<T>::readFromBuffer(val.data, offset);
+		        free(val.data);
+
+
+	            readAttribute(gval, attrs, this->gAttr.name, inputData);
+			
+	            //convert buffer to specific data
+		        int offset_group = 0;
+	            T2 group = reader<T2>::readFromBuffer(gval.data, offset_group);
+	            free(gval.data);
+
+		        if( gAttr_hash.find(group) == gAttr_hash.end() )
+				{
+					vector<T> stat;
+			        stat.push_back(num); //sum
+			        stat.push_back(1); //count
+			        stat.push_back(num); //max
+			        stat.push_back(num); //min
+			        gAttr_hash.insert(make_pair(group, stat));
+				}   
+	            else
+				{
+			        (gAttr_hash[group])[0] += num;
+			        (gAttr_hash[group])[1] ++;
+		            if(num > (gAttr_hash[group])[2]) 
+						(gAttr_hash[group])[2] = num;
+					if(num < (gAttr_hash[group])[3]) 
+				        (gAttr_hash[group])[3] = num;
+				}
+				
+
+			}
+			map<T2, vector<T>>::iterator it = gAttr_hash.begin();
+
+		    ini = false;
+		    free(inputData);
+		    }
+
+			if ( !(gAttr_hash.empty()) )
+			{
+				map<T2, vector<T>>::iterator it = gAttr_hash.begin();
+				int offset = 0;
+                reader<T2>::writeToBuffer(data, offset, it->first); 
+			    
+
+				if(this->op == MIN) {
+					reader<T>::writeToBuffer(data, offset, (it->second)[3]);
+		        } else if(this->op == MAX) {
+			        reader<T>::writeToBuffer(data, offset, (it->second)[2]);
+		        } else if(this->op == SUM) {
+			        reader<T>::writeToBuffer(data, offset, (it->second)[0]);
+		        } else if(this->op == COUNT) {//special case for count
+			        reader<int>::writeToBuffer(data, offset, (it->second)[1]);
+		        } else if(this->op == AVG) {//special case for avg
+			        reader<float>::writeToBuffer(data, offset, ((it->second)[0] / (float)((it->second)[1])) );
+				}
+			    
+				gAttr_hash.erase( gAttr_hash.begin() );
+				if( gAttr_hash.empty() )
+				{
+					ini = true;
+				    done = true;
+				}
+
+				return RC_SUCCESS;
+			}
+		
 	}
-};
+	
+
+}
+
 
 NLJoin::NLJoin(Iterator *leftIn, TableScan *rightIn, const Condition &condition, const unsigned numPages)
 {
